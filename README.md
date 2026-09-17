@@ -1,1 +1,1 @@
-# cen-rio3D
+# Cenário 3D para a aula de Computação Gráfica
