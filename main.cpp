@@ -489,8 +489,8 @@ void inicializaRenderizacao()
         inicializaCamera();
         glDrawArrays(GL_TRIANGLES, 0, NVertices);
 
-        int tamanhoMinimapa = 200;
-        int margem = 10;
+        int tamanhoMinimapa = 180;
+        int margem = 5;
         glViewport(WIDTH - tamanhoMinimapa - margem, HEIGHT - tamanhoMinimapa - margem, tamanhoMinimapa, tamanhoMinimapa);
         
         inicializaCameraMinimapa();
