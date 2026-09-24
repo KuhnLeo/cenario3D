@@ -381,11 +381,37 @@ void especificaMatrizProjecao()
     glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(projecao));
 }
 
+void especificaMatrizVisualizacaoMinimapa() {
+    glm::vec3 posicaoTopo = glm::vec3(Cam_pos.x, 10.0f, Cam_pos.z);
+    glm::vec3 alvo = glm::vec3(Cam_pos.x, 0.0f, Cam_pos.z);
+    glm::vec3 upMinimapa = glm::vec3(0.0f, 0.0f, -1.0f);
+
+    glm::mat4 visualizacao = glm::lookAt(posicaoTopo, alvo, upMinimapa);
+
+    GLint transformLoc = glGetUniformLocation(Shader_programm, "view");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(visualizacao));
+}
+
+void especificaMatrizProjecaoMinimapa() {
+    float tamanho = 3.0f;
+
+    glm::mat4 projecao = glm::ortho(-tamanho, tamanho, -tamanho, tamanho, 0.1f, 100.0f);
+
+    GLint transformLoc = glGetUniformLocation(Shader_programm, "proj");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(projecao));
+}
+
 void inicializaCamera()
 {
     atualizaDirecaoCamera();
     especificaMatrizVisualizacao();
     especificaMatrizProjecao();
+}
+
+void inicializaCameraMinimapa() {
+    atualizaDirecaoCamera();
+    especificaMatrizVisualizacaoMinimapa();
+    especificaMatrizProjecaoMinimapa();
 }
 
 void trataTeclado()
@@ -448,7 +474,6 @@ void inicializaRenderizacao()
         glUseProgram(Shader_programm);
 
         trataTeclado();
-        inicializaCamera();
 
         glActiveTexture(GL_TEXTURE0);           // Ativa Gaveta 0
         glBindTexture(GL_TEXTURE_2D, texture1); // Pluga a Textura 1 nela
@@ -460,7 +485,17 @@ void inicializaRenderizacao()
         GLint transformLoc = glGetUniformLocation(Shader_programm, "matriz");
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
 
+        glViewport(0, 0, WIDTH, HEIGHT);
+        inicializaCamera();
         glDrawArrays(GL_TRIANGLES, 0, NVertices);
+
+        int tamanhoMinimapa = 200;
+        int margem = 10;
+        glViewport(WIDTH - tamanhoMinimapa - margem, HEIGHT - tamanhoMinimapa - margem, tamanhoMinimapa, tamanhoMinimapa);
+        
+        inicializaCameraMinimapa();
+        glDrawArrays(GL_TRIANGLES, 0, NVertices);
+
 
         glfwPollEvents();
         glfwSwapBuffers(Window);
