@@ -18,7 +18,10 @@ GLuint Vao = 0;
 int NVertices;
 unsigned int texture1;
 int WIDTH = 1000;
-int HEIGHT = 800;
+int HEIGHT = 800; 
+int FB_WIDTH = 0;
+int FB_HEIGHT = 0;
+float ESCALA_RETINA = 1.0f;
 
 float Tempo_entre_frames = 0.0f; // variavel utilizada para movimentar a camera
 
@@ -181,51 +184,59 @@ std::string leShaderDoArquivo(const char *caminhoArquivo)
 
 void carregaTextura(string filePATH)
 {
-    // AVISO: Imagens são lidas de Cima para Baixo pelo STB.
-    // O OpenGL espera o Y(0) embaixo. É VITAL mandar o STB inverter o eixo Y!
+    std::cout << "1 - Entrando na funcao" << std::endl;
     stbi_set_flip_vertically_on_load(true);
+    std::cout << "2 - flip OK" << std::endl;
 
     int width, height, nrChannels;
     unsigned char *data = stbi_load(filePATH.c_str(), &width, &height, &nrChannels, 0);
+    std::cout << "3 - stbi_load OK, data = " << (void*)data << std::endl;
 
-    if (data)
-    {
-        // Verifica dinamicamente quantos canais a imagem tem para não bugar a memória
-        GLenum format;
-        if (nrChannels == 1)
-            format = GL_RED;
-        else if (nrChannels == 3)
-            format = GL_RGB;
-        else if (nrChannels == 4)
-            format = GL_RGBA;
-
-        // 1. Gera e faz o bind do ID da textura
-        glGenTextures(1, &texture1);
-        glBindTexture(GL_TEXTURE_2D, texture1);
-
-        // 2. Configura os parâmetros (Wrapping / Filtering) no objeto ativo
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        // 3. Envia os bytes da RAM para a VRAM usando a variável 'format' correta
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+    if (!data) {
+        std::cerr << "Falha: " << stbi_failure_reason() << std::endl;
+        return;
     }
-    else
-    {
-        std::cout << "Falha ao ler textura" << std::endl;
-    }
-    // 4. Libera a RAM, a GPU já assumiu a carga
+    std::cout << "4 - " << width << "x" << height << " canais=" << nrChannels << std::endl;
+
+    GLenum format = GL_RGB;
+    if (nrChannels == 1) format = GL_RED;
+    else if (nrChannels == 3) format = GL_RGB;
+    else if (nrChannels == 4) format = GL_RGBA;
+    std::cout << "5 - format OK" << std::endl;
+
+    glGenTextures(1, &texture1);
+    std::cout << "6 - glGenTextures OK" << std::endl;
+
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    std::cout << "7 - glBindTexture OK" << std::endl;
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    std::cout << "8 - TexParameteri OK" << std::endl;
+
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    std::cout << "9 - glTexImage2D OK" << std::endl;
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+    std::cout << "10 - Textura completa!" << std::endl;
+
     stbi_image_free(data);
+}
+
+void atualizaTamanhoFramebuffer()
+{
+    glfwGetFramebufferSize(Window, &FB_WIDTH, &FB_HEIGHT);
+    ESCALA_RETINA = (float)FB_WIDTH / (float)WIDTH;
 }
 
 void redimensionaCallback(GLFWwindow *window, int w, int h)
 {
     WIDTH = w;
     HEIGHT = h;
-    glViewport(0, 0, WIDTH, HEIGHT);
+    atualizaTamanhoFramebuffer();
+    glViewport(0, 0, FB_WIDTH, FB_HEIGHT);
 }
 
 // Callback responsável por ler a posição do mouse e girar a câmera
@@ -266,6 +277,11 @@ void inicializaOpenGL()
         exit(EXIT_FAILURE);
     }
 
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // obrigatório no macOS
+
     Window = glfwCreateWindow(WIDTH, HEIGHT, "Exemplo - Camera Livre com Mouse", NULL, NULL);
     if (!Window)
     {
@@ -286,6 +302,9 @@ void inicializaOpenGL()
         std::cerr << "Falha ao inicializar o GLAD" << std::endl;
         exit(EXIT_FAILURE);
     }
+    std::cout << "GLAD OK" << std::endl;
+    std::cout << "Versao OpenGL: " << glGetString(GL_VERSION) << std::endl;
+    std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
 }
 
 void inicializaObjetos()
@@ -297,6 +316,9 @@ void inicializaObjetos()
 void inicializaShaders()
 {
     // 1. Lê o código dos arquivos externos
+    //std::string vertexCode = leShaderDoArquivo("../assets/shaders/vertex_shader.glsl");
+    //std::string fragmentCode = leShaderDoArquivo("../assets/shaders/fragment_shader.glsl");
+
     std::string vertexCode = leShaderDoArquivo("../assets/shaders/vertex_shader.glsl");
     std::string fragmentCode = leShaderDoArquivo("../assets/shaders/fragment_shader.glsl");
 
@@ -393,12 +415,16 @@ void especificaMatrizVisualizacaoMinimapa() {
 }
 
 void especificaMatrizProjecaoMinimapa() {
-    float tamanho = 3.0f;
+    // Câmera fixa olhando para a origem de cima
+    glm::vec3 posicaoTopo = glm::vec3(0.0f, 10.0f, 0.0f);
+    glm::vec3 alvo = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 upMinimapa = glm::vec3(0.0f, 0.0f, -1.0f);
 
-    glm::mat4 projecao = glm::ortho(-tamanho, tamanho, -tamanho, tamanho, 0.1f, 100.0f);
+    glm::mat4 visualizacao = glm::lookAt(posicaoTopo, alvo, upMinimapa);
 
-    GLint transformLoc = glGetUniformLocation(Shader_programm, "proj");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(projecao));
+    GLint transformLoc = glGetUniformLocation(Shader_programm, "view");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(visualizacao));
+
 }
 
 void inicializaCamera()
@@ -464,6 +490,7 @@ void inicializaRenderizacao()
 
     while (!glfwWindowShouldClose(Window))
     {
+        atualizaTamanhoFramebuffer();
         double tempo_frame_atual = glfwGetTime();
         Tempo_entre_frames = (float)(tempo_frame_atual - tempo_anterior);
         tempo_anterior = tempo_frame_atual;
@@ -485,13 +512,13 @@ void inicializaRenderizacao()
         GLint transformLoc = glGetUniformLocation(Shader_programm, "matriz");
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
 
-        glViewport(0, 0, WIDTH, HEIGHT);
+        glViewport(0, 0, FB_WIDTH, FB_HEIGHT);
         inicializaCamera();
         glDrawArrays(GL_TRIANGLES, 0, NVertices);
 
         int tamanhoMinimapa = 180;
         int margem = 5;
-        glViewport(WIDTH - tamanhoMinimapa - margem, HEIGHT - tamanhoMinimapa - margem, tamanhoMinimapa, tamanhoMinimapa);
+        glViewport(FB_WIDTH - tamanhoMinimapa - margem, FB_HEIGHT - tamanhoMinimapa - margem, tamanhoMinimapa, tamanhoMinimapa);
         
         inicializaCameraMinimapa();
         glDrawArrays(GL_TRIANGLES, 0, NVertices);
@@ -504,13 +531,16 @@ void inicializaRenderizacao()
     glfwTerminate();
 }
 
-int main()
-{
+int main() {
     inicializaOpenGL();
+    std::cout << "OpenGL OK" << std::endl;
 
     inicializaObjetos();
-    inicializaShaders();
-    inicializaRenderizacao();
+    std::cout << "Objetos OK" << std::endl;
 
+    inicializaShaders();
+    std::cout << "Shaders OK" << std::endl;
+
+    inicializaRenderizacao();
     return 0;
 }
