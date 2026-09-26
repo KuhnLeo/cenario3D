@@ -309,8 +309,8 @@ void inicializaOpenGL()
 
 void inicializaObjetos()
 {
-    carregaTextura("../assets/Modelos3D/Suzanne.png");
-    Vao = loadSimpleOBJ("../assets/Modelos3D/Suzanne.obj", NVertices);
+    carregaTextura("../assets/Modelos3D/variation-a.png");
+    Vao = loadSimpleOBJ("../assets/Modelos3D/tree-snow.obj", NVertices);
 }
 
 void inicializaShaders()
