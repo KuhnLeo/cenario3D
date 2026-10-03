@@ -14,9 +14,22 @@ using namespace std;
 
 GLFWwindow *Window = nullptr;
 GLuint Shader_programm = 0;
+
+//CHÃO
 GLuint Vao = 0;
 int NVertices;
 unsigned int texture1;
+
+//ESTRADA
+GLuint VaoEstrada = 0;
+int NVerticesEstrada;
+GLuint texturaEstrada;
+
+//PINHEIRO
+GLuint VaoPinheiro = 0;
+int NVerticesPinheiro;
+GLuint texturaPinheiro;
+
 int WIDTH = 1000;
 int HEIGHT = 800; 
 int FB_WIDTH = 0;
@@ -26,8 +39,8 @@ float ESCALA_RETINA = 1.0f;
 float Tempo_entre_frames = 0.0f; // variavel utilizada para movimentar a camera
 
 // Variáveis referentes a câmera virtual e sua projeção
-float Cam_speed = 2.5f;                             // velocidade da camera aumentada um pouco para navegação livre
-glm::vec3 Cam_pos = glm::vec3(0.0f, 0.0f, 2.0f);    // posicao inicial da câmera
+float Cam_speed = 10.0f;                             // velocidade da camera aumentada um pouco para navegação livre
+glm::vec3 Cam_pos = glm::vec3(0.0f, 3.0f, 9.0f);    // posicao inicial da câmera
 glm::vec3 Cam_front = glm::vec3(0.0f, 0.0f, -1.0f); // vetor para onde a câmera está olhando
 glm::vec3 Cam_up = glm::vec3(0.0f, 1.0f, 0.0f);     // vetor "para cima" global
 
@@ -182,7 +195,7 @@ std::string leShaderDoArquivo(const char *caminhoArquivo)
     return shaderStream.str();
 }
 
-void carregaTextura(string filePATH)
+GLuint carregaTextura(string filePATH)
 {
     std::cout << "1 - Entrando na funcao" << std::endl;
     stbi_set_flip_vertically_on_load(true);
@@ -194,7 +207,7 @@ void carregaTextura(string filePATH)
 
     if (!data) {
         std::cerr << "Falha: " << stbi_failure_reason() << std::endl;
-        return;
+        return 0;
     }
     std::cout << "4 - " << width << "x" << height << " canais=" << nrChannels << std::endl;
 
@@ -203,11 +216,12 @@ void carregaTextura(string filePATH)
     else if (nrChannels == 3) format = GL_RGB;
     else if (nrChannels == 4) format = GL_RGBA;
     std::cout << "5 - format OK" << std::endl;
-
-    glGenTextures(1, &texture1);
+    
+    GLuint textura;
+    glGenTextures(1, &textura);
     std::cout << "6 - glGenTextures OK" << std::endl;
 
-    glBindTexture(GL_TEXTURE_2D, texture1);
+    glBindTexture(GL_TEXTURE_2D, textura);
     std::cout << "7 - glBindTexture OK" << std::endl;
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -223,6 +237,7 @@ void carregaTextura(string filePATH)
     std::cout << "10 - Textura completa!" << std::endl;
 
     stbi_image_free(data);
+    return textura;
 }
 
 void atualizaTamanhoFramebuffer()
@@ -309,8 +324,15 @@ void inicializaOpenGL()
 
 void inicializaObjetos()
 {
-    carregaTextura("../assets/Modelos3D/Suzanne.png");
-    Vao = loadSimpleOBJ("../assets/Modelos3D/Suzanne.obj", NVertices);
+    texture1 = carregaTextura("../assets/Modelos3D/colormap.png");
+    Vao = loadSimpleOBJ("../assets/Modelos3D/block-grass-low-large.obj", NVertices);
+
+    texturaEstrada = carregaTextura("../assets/Modelos3D/colormap-fantasy.png");
+    VaoEstrada = loadSimpleOBJ("../assets/Modelos3D/road.obj", NVerticesEstrada);   
+
+    texturaPinheiro = texture1; // mesma paleta do chão (Platformer Kit), não precisa carregar de novo
+    VaoPinheiro = loadSimpleOBJ("../assets/Modelos3D/tree-pine.obj", NVerticesPinheiro);
+
 }
 
 void inicializaShaders()
@@ -415,16 +437,13 @@ void especificaMatrizVisualizacaoMinimapa() {
 }
 
 void especificaMatrizProjecaoMinimapa() {
-    // Câmera fixa olhando para a origem de cima
-    glm::vec3 posicaoTopo = glm::vec3(0.0f, 10.0f, 0.0f);
-    glm::vec3 alvo = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3 upMinimapa = glm::vec3(0.0f, 0.0f, -1.0f);
+    // Projeção ortográfica: o minimapa mostra um quadrado de 2 * tamanho unidades de lado
+    float tamanho = 20.0f;
 
-    glm::mat4 visualizacao = glm::lookAt(posicaoTopo, alvo, upMinimapa);
+    glm::mat4 projecao = glm::ortho(-tamanho, tamanho, -tamanho, tamanho, 0.1f, 100.0f);
 
-    GLint transformLoc = glGetUniformLocation(Shader_programm, "view");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(visualizacao));
-
+    GLint transformLoc = glGetUniformLocation(Shader_programm, "proj");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(projecao));
 }
 
 void inicializaCamera()
@@ -481,6 +500,61 @@ void trataTeclado()
     }
 }
 
+void desenhaChao() {
+    GLint transformLoc = glGetUniformLocation(Shader_programm, "matriz");
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture1);
+    glBindVertexArray(Vao);
+    
+    for (int x = -25; x <= 25; x++) {
+        for (int z = -99; z <= 0; z++) {
+            glm::mat4 transformacao = glm::mat4(1.0f);
+            transformacao = glm::translate(transformacao, glm::vec3(x * 2.0f, -0.5f, z * 2.0f));
+            glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
+
+            glDrawArrays(GL_TRIANGLES, 0, NVertices);
+        }
+    }
+}
+
+void desenhaEstrada() {
+    GLint transformLoc = glGetUniformLocation(Shader_programm, "matriz");
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texturaEstrada);
+    glBindVertexArray(VaoEstrada);
+
+    for (int z = -99; z <= 0; z++) {
+        glm::mat4 transformacao = glm::mat4(1.0f);
+        transformacao = glm::translate(transformacao, glm::vec3(0 * 2.0f, 0.0f, z * 2.0f));
+        transformacao = glm::scale(transformacao, glm::vec3(2.0f, 1.0f, 2.0f));
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
+
+        glDrawArrays(GL_TRIANGLES, 0, NVerticesEstrada);
+    }
+}
+
+void desenhaPinheiro() {
+    GLint transformLoc = glGetUniformLocation(Shader_programm, "matriz");
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texturaPinheiro);
+    glBindVertexArray(VaoPinheiro);
+
+    for (int z = -99; z <= 0; z += 10) {
+
+        for (int lado = -1; lado <= 1; lado += 2) {
+            glm::mat4 transformacao = glm::mat4(1.0f);
+            transformacao = glm::translate(transformacao, glm::vec3(lado * 2.0f, 0.0f, z * 2.0f));
+            transformacao = glm::scale(transformacao, glm::vec3(2.0f)); // dobra o tamanho do pinheiro
+            glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
+
+            glDrawArrays(GL_TRIANGLES, 0, NVerticesPinheiro);
+    }
+}
+    }
+
 void inicializaRenderizacao()
 {
     double tempo_anterior = glfwGetTime();
@@ -502,26 +576,40 @@ void inicializaRenderizacao()
 
         trataTeclado();
 
-        glActiveTexture(GL_TEXTURE0);           // Ativa Gaveta 0
-        glBindTexture(GL_TEXTURE_2D, texture1); // Pluga a Textura 1 nela
-        glBindVertexArray(Vao);
+        glActiveTexture(GL_TEXTURE0);
+        
+        // Ativa Gaveta 0
+        // glBindTexture(GL_TEXTURE_2D, texture1); // Pluga a Textura 1 nela
+        // glBindVertexArray(Vao);
 
         glm::mat4 transformacao = glm::mat4(1.0f);
-        transformacao = glm::rotate(transformacao, (float)glfwGetTime() * 0.5f, glm::vec3(0.5f, 1.0f, 0.0f));
+        transformacao = glm::translate(transformacao, glm::vec3(0.0f, -2.0f, 0.0f));
+        // transformacao = glm::rotate(transformacao, (float)glfwGetTime() * 0.5f, glm::vec3(0.5f, 1.0f, 0.0f));
 
         GLint transformLoc = glGetUniformLocation(Shader_programm, "matriz");
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
 
         glViewport(0, 0, FB_WIDTH, FB_HEIGHT);
         inicializaCamera();
-        glDrawArrays(GL_TRIANGLES, 0, NVertices);
+        desenhaChao();
+        desenhaEstrada();
+        desenhaPinheiro();
 
         int tamanhoMinimapa = 180;
         int margem = 5;
         glViewport(FB_WIDTH - tamanhoMinimapa - margem, FB_HEIGHT - tamanhoMinimapa - margem, tamanhoMinimapa, tamanhoMinimapa);
-        
+
+        // Limpa cor e profundidade só no retângulo do minimapa, para a cena principal não interferir nele
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(FB_WIDTH - tamanhoMinimapa - margem, FB_HEIGHT - tamanhoMinimapa - margem, tamanhoMinimapa, tamanhoMinimapa);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_SCISSOR_TEST);
+
         inicializaCameraMinimapa();
-        glDrawArrays(GL_TRIANGLES, 0, NVertices);
+        desenhaChao();
+        desenhaEstrada();
+        desenhaPinheiro();
+        // glDrawArrays(GL_TRIANGLES, 0, NVertices);
 
 
         glfwPollEvents();
