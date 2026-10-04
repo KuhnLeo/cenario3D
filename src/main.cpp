@@ -10,6 +10,8 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <cmath>
+#include <climits>
 using namespace std;
 
 GLFWwindow *Window = nullptr;
@@ -29,6 +31,66 @@ GLuint texturaEstrada;
 GLuint VaoPinheiro = 0;
 int NVerticesPinheiro;
 GLuint texturaPinheiro;
+
+//TERRENO
+const float PASSO_TERRENO = 0.5f;
+const int TERRENO_X_MIN = -25, TERRENO_X_MAX = 25;
+const int Z_FIM = -59;
+struct Colina {float x, z, raio, altura;};
+const Colina COLINAS[] = {
+    {-34.0f, -26.0f, 16.0f, 3.5f},
+    { 32.0f, -52.0f, 18.0f, 4.0f},
+    {-30.0f, -82.0f, 20.0f, 5.0f},
+    { 28.0f, -98.0f, 14.0f, 3.0f},
+    {-42.0f, -52.0f, 10.0f, 2.0f},
+    { 20.0f, -14.0f,  8.0f, 1.5f},
+    {-18.0f, -62.0f,  7.0f, 1.5f},
+    { 40.0f, -22.0f,  9.0f, 2.0f},
+};
+struct ZonaPlana { float x, z, raio; };
+const ZonaPlana ZONAS_PLANAS[] = {
+    {-8.0f, -20.0f, 9.0f},
+    { 8.0f, -34.0f, 9.0f},
+};
+std::vector<int> niveisTerreno;
+float alturaTerreno(float x, float z) {
+    if (std::fabs(x) < 4.0f) return 0.0f;
+    for (const ZonaPlana &zp : ZONAS_PLANAS)
+        if (std::hypot(x - zp.x, z - zp.z) < zp.raio) return 0.0f;
+
+    float h = 0.0f;
+    for (const Colina &c : COLINAS) {
+        float d = std::hypot(x - c.x, z - c.z);
+        if (d < c.raio)
+            h = std::max(h, c.altura * 0.5f * (1.0f + std::cos(3.14159265f * d / c.raio)));
+    }
+    return h;
+}
+int indiceTerreno(int bx, int bz) {
+    return (bz - Z_FIM) * (TERRENO_X_MAX - TERRENO_X_MIN + 1) + (bx - TERRENO_X_MIN);
+}
+void inicializaTerreno() {
+    int largura = TERRENO_X_MAX - TERRENO_X_MIN + 1;
+    int profund = -Z_FIM + 1;
+    niveisTerreno.assign(largura * profund, 0);
+    for (int bz = Z_FIM; bz <= 0; bz++)
+        for (int bx = TERRENO_X_MIN; bx <= TERRENO_X_MAX; bx++)
+            niveisTerreno[indiceTerreno(bx, bz)] =
+                (int)std::lround(alturaTerreno(bx * 2.0f, bz * 2.0f) / PASSO_TERRENO);
+}
+int nivelTerreno(int bx, int bz, int padrao) {
+    if (bx < TERRENO_X_MIN || bx > TERRENO_X_MAX || bz < Z_FIM || bz > 0) return padrao;
+    return niveisTerreno[indiceTerreno(bx, bz)];
+}
+
+//MODELOS
+struct Modelo {
+    GLuint vao = 0;
+    int nVertices = 0;
+    GLuint textura = 0;
+};
+
+Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto;
 
 int WIDTH = 1000;
 int HEIGHT = 800; 
@@ -132,7 +194,7 @@ int loadSimpleOBJ(string filePATH, int &nVertices)
     }
 
     arqEntrada.close();
-
+    
     std::cout << "Gerando o buffer de geometria..." << std::endl;
     GLuint VBO, VAO;
 
@@ -173,6 +235,23 @@ int loadSimpleOBJ(string filePATH, int &nVertices)
     std::cout << "Buffer de geometria gerado com " << nVertices << " vertices" << std::endl;
 
     return VAO;
+}
+
+Modelo carregaModelo(const string &obj, GLuint textura) {
+    Modelo m;
+    m.vao = loadSimpleOBJ(obj, m.nVertices);
+    m.textura = textura;
+    return m;
+}
+
+void desenhaModelo(const Modelo &m, const glm::mat4 &matriz) {
+    GLint loc = glGetUniformLocation(Shader_programm, "matriz");
+    glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matriz));
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m.textura);
+    glBindVertexArray(m.vao);
+    glDrawArrays(GL_TRIANGLES, 0, m.nVertices);
 }
 
 std::string leShaderDoArquivo(const char *caminhoArquivo)
@@ -333,6 +412,15 @@ void inicializaObjetos()
     texturaPinheiro = texture1; // mesma paleta do chão (Platformer Kit), não precisa carregar de novo
     VaoPinheiro = loadSimpleOBJ("../assets/Modelos3D/tree-pine.obj", NVerticesPinheiro);
 
+    const string pasta = "../assets/Modelos3D/";
+    parede       = carregaModelo(pasta + "wall.obj",              texturaEstrada);
+    paredePorta  = carregaModelo(pasta + "wall-door.obj",         texturaEstrada);
+    paredeJanela = carregaModelo(pasta + "wall-window-small.obj", texturaEstrada);
+    paredeCanto  = carregaModelo(pasta + "wall-corner.obj",       texturaEstrada);
+    telhado      = carregaModelo(pasta + "roof.obj",              texturaEstrada);
+    telhadoCanto = carregaModelo(pasta + "roof-corner.obj",       texturaEstrada);
+
+    inicializaTerreno();
 }
 
 void inicializaShaders()
@@ -415,7 +503,7 @@ void especificaMatrizVisualizacao()
 void especificaMatrizProjecao()
 {
     float znear = 0.1f;
-    float zfar = 100.0f;
+    float zfar = 200.0f;
     float fov = glm::radians(67.0f);
     float aspecto = (float)WIDTH / (float)HEIGHT;
 
@@ -426,7 +514,7 @@ void especificaMatrizProjecao()
 }
 
 void especificaMatrizVisualizacaoMinimapa() {
-    glm::vec3 posicaoTopo = glm::vec3(Cam_pos.x, 10.0f, Cam_pos.z);
+    glm::vec3 posicaoTopo = glm::vec3(Cam_pos.x, 25.0f, Cam_pos.z);
     glm::vec3 alvo = glm::vec3(Cam_pos.x, 0.0f, Cam_pos.z);
     glm::vec3 upMinimapa = glm::vec3(0.0f, 0.0f, -1.0f);
 
@@ -506,17 +594,27 @@ void desenhaChao() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture1);
     glBindVertexArray(Vao);
-    
-    for (int x = -25; x <= 25; x++) {
-        for (int z = -99; z <= 0; z++) {
-            glm::mat4 transformacao = glm::mat4(1.0f);
-            transformacao = glm::translate(transformacao, glm::vec3(x * 2.0f, -0.5f, z * 2.0f));
-            glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
 
-            glDrawArrays(GL_TRIANGLES, 0, NVertices);
+    auto bloco = [&](int x, int z, float y) {
+        glm::mat4 t = glm::translate(glm::mat4(1.0f), glm::vec3(x * 2.0f, y, z * 2.0f));
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(t));
+        glDrawArrays(GL_TRIANGLES, 0, NVertices);
+    };
+
+    const float Y_BASE = -0.5f;   // a mesma altura do chão plano de antes
+
+    for (int x = TERRENO_X_MIN; x <= TERRENO_X_MAX; x++) {
+        for (int z = Z_FIM; z <= 0; z++) {
+            int n = nivelTerreno(x, z, 0);
+            int viz = std::min(std::min(nivelTerreno(x + 1, z, n), nivelTerreno(x - 1, z, n)),
+                               std::min(nivelTerreno(x, z + 1, n), nivelTerreno(x, z - 1, n)));
+
+            bloco(x, z, Y_BASE + n * PASSO_TERRENO);                 // bloco do topo
+            for (int k = n - 1; k > viz; k--)                        // preenche vãos nas encostas
+                bloco(x, z, Y_BASE + k * PASSO_TERRENO);
         }
     }
-}
+}  
 
 void desenhaEstrada() {
     GLint transformLoc = glGetUniformLocation(Shader_programm, "matriz");
@@ -525,7 +623,7 @@ void desenhaEstrada() {
     glBindTexture(GL_TEXTURE_2D, texturaEstrada);
     glBindVertexArray(VaoEstrada);
 
-    for (int z = -99; z <= 0; z++) {
+    for (int z = -59; z <= 0; z++) {
         glm::mat4 transformacao = glm::mat4(1.0f);
         transformacao = glm::translate(transformacao, glm::vec3(0 * 2.0f, 0.0f, z * 2.0f));
         transformacao = glm::scale(transformacao, glm::vec3(2.0f, 1.0f, 2.0f));
@@ -542,7 +640,7 @@ void desenhaPinheiro() {
     glBindTexture(GL_TEXTURE_2D, texturaPinheiro);
     glBindVertexArray(VaoPinheiro);
 
-    for (int z = -99; z <= 0; z += 10) {
+    for (int z = -59; z <= 0; z += 10) {
 
         for (int lado = -1; lado <= 1; lado += 2) {
             glm::mat4 transformacao = glm::mat4(1.0f);
@@ -554,6 +652,51 @@ void desenhaPinheiro() {
     }
 }
     }
+
+void desenhaCasa(glm::vec3 pos, float rotY = 0.0f, float escala = 2.0f)
+{
+    const int LARGURA = 3;
+    const int PROFUNDIDADE = 2;
+    const float ALTURA_PAREDE = 1.0f; 
+
+    glm::mat4 base = glm::mat4(1.0f);
+    base = glm::translate(base, pos);
+    base = glm::rotate(base, glm::radians(rotY), glm::vec3(0, 1, 0));
+    base = glm::scale(base, glm::vec3(escala));
+
+    auto coloca = [&](const Modelo &m, glm::vec3 local, float rot) {
+        glm::mat4 t = glm::translate(base, local);
+        t = glm::rotate(t, glm::radians(rot), glm::vec3(0, 1, 0));
+        desenhaModelo(m, t);
+    };
+
+    for (int i = 0; i < LARGURA; i++) {
+        for (int j = 0; j < PROFUNDIDADE; j++) {
+            float x = i - (LARGURA - 1) / 2.0f;
+            float z = j - (PROFUNDIDADE - 1) / 2.0f;
+
+            // Frente (+z): porta no meio, janelas ao lado
+            if (j == PROFUNDIDADE - 1)
+                coloca(i == LARGURA / 2 ? paredePorta : paredeJanela, glm::vec3(x, 0, z), -90.0f);
+            // Fundo (-z)
+            if (j == 0)
+                coloca(parede, glm::vec3(x, 0, z), 90.0f);
+            // Lado esquerdo (-x)
+            if (i == 0)
+                coloca(paredeJanela, glm::vec3(x, 0, z), 180.0f);
+            // Lado direito (+x)
+            if (i == LARGURA - 1)
+                coloca(paredeJanela, glm::vec3(x, 0, z), 0.0f);
+
+            // Telhado: beiral para fora, ponto alto no meio da casa
+            if (j >= PROFUNDIDADE / 2)
+                coloca(telhado, glm::vec3(x, ALTURA_PAREDE, z), 90.0f);   // metade da frente
+            else
+                coloca(telhado, glm::vec3(x, ALTURA_PAREDE, z), -90.0f);  // metade de trás
+        }
+    }
+}
+
 
 void inicializaRenderizacao()
 {
@@ -594,6 +737,8 @@ void inicializaRenderizacao()
         desenhaChao();
         desenhaEstrada();
         desenhaPinheiro();
+        desenhaCasa(glm::vec3(-8.0f, 0.0f, -20.0f),  90.0f);
+        desenhaCasa(glm::vec3( 8.0f, 0.0f, -34.0f), -90.0f);
 
         int tamanhoMinimapa = 180;
         int margem = 5;
@@ -609,8 +754,8 @@ void inicializaRenderizacao()
         desenhaChao();
         desenhaEstrada();
         desenhaPinheiro();
-        // glDrawArrays(GL_TRIANGLES, 0, NVertices);
-
+        desenhaCasa(glm::vec3(-8.0f, 0.0f, -20.0f),  90.0f);
+        desenhaCasa(glm::vec3( 8.0f, 0.0f, -34.0f), -90.0f);
 
         glfwPollEvents();
         glfwSwapBuffers(Window);
