@@ -37,11 +37,22 @@ GLuint VaoPinheiro = 0;
 int NVerticesPinheiro;
 GLuint texturaPinheiro;
 
-// BARRACA VERDE
+// BARRACA
 GLuint VaoBarraca = 0;
 int NVerticesBarraca;
 GLuint texturaBarraca;
 
+// CHARACTER
+GLuint texturaCharacter;
+
+//MODELOS
+struct Modelo {
+    GLuint vao = 0;
+    int nVertices = 0;
+    GLuint textura = 0;
+};
+
+Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto, barracaVerde, charBarraca;
 
 // TRANSFORMAÇÕES DOS OBJETOS
 // Posição no mundo (X, Y, Z), rotação em torno de Y em graus e escala uniforme.
@@ -57,8 +68,22 @@ const Transformacao CASAS[] = {
 };
 
 const Transformacao BARRACA = {
-    glm::vec3(3.5f, 0.0f, -50.0f), 180.0f, 2.0f
+    glm::vec3(3.5f, 0.0f, -50.0f), 0.0f, 2.0f
 };
+
+
+struct Personagem {
+    const Modelo *modelo;
+    Transformacao transformacao;
+};
+
+// Cada entrada escolhe um modelo e sua posição, rotação e escala.
+// O modelo é carregado uma vez em inicializaObjetos() e compartilhado pelas cópias.
+const Personagem CHARACTERS[] = {
+    {&charBarraca, {glm::vec3(4.7f, 0.0f, -50.0f), -90.0f, 2.0f}},
+    {&charBarraca, {glm::vec3(-5.0f, 0.0f, -20.0f), -90.0f, 2.0f}}
+};
+
 
 // Sol: direção a partir da câmera, distância e raio.
 // Aponta para cima e à frente da câmera inicial.
@@ -135,15 +160,6 @@ int nivelTerreno(int bx, int bz, int padrao) {
     if (bx < TERRENO_X_MIN || bx > TERRENO_X_MAX || bz < Z_FIM || bz > 0) return padrao;
     return niveisTerreno[indiceTerreno(bx, bz)];
 }
-
-//MODELOS
-struct Modelo {
-    GLuint vao = 0;
-    int nVertices = 0;
-    GLuint textura = 0;
-};
-
-Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto, barracaVerde;
 
 int WIDTH = 1000;
 int HEIGHT = 800; 
@@ -528,6 +544,7 @@ void inicializaObjetos()
     Vao = loadSimpleOBJ("../assets/Modelos3D/block-grass-low-large.obj", NVertices);
 
     texturaEstrada = carregaTextura("../assets/Modelos3D/colormap-fantasy.png");
+    texturaCharacter = carregaTextura("../assets/Modelos3D/colormap-mini-characters.png");
     VaoEstrada = loadSimpleOBJ("../assets/Modelos3D/road.obj", NVerticesEstrada);   
 
     texturaPinheiro = texture1; // mesma paleta do chão (Platformer Kit), não precisa carregar de novo
@@ -541,6 +558,8 @@ void inicializaObjetos()
     telhado      = carregaModelo(pasta + "roof.obj",              texturaEstrada);
     telhadoCanto = carregaModelo(pasta + "roof-corner.obj",       texturaEstrada);
     barracaVerde = carregaModelo(pasta + "stall-green.obj",       texturaEstrada);
+    charBarraca = carregaModelo(pasta + "character-male-b.obj",   texturaCharacter);
+
 
     inicializaSol();
     inicializaTerreno();
@@ -840,6 +859,29 @@ void desenhaBarraca() {
     desenhaModelo(barracaVerde, modelo);
 }
 
+void desenhaCharacter()
+{
+    for (const Personagem &personagem : CHARACTERS) {
+        const Transformacao &t = personagem.transformacao;
+        glm::mat4 matriz = glm::mat4(1.0f);
+
+        matriz = glm::translate(matriz, t.posicao);
+
+        matriz = glm::rotate(
+            matriz,
+            glm::radians(t.rotacaoY),
+            glm::vec3(0, 1, 0)
+        );
+
+        matriz = glm::scale(
+            matriz,
+            glm::vec3(t.escala)
+        );
+
+        desenhaModelo(*personagem.modelo, matriz);
+    }
+}
+
 void desenhaCasa(glm::vec3 pos, float rotY = 0.0f, float escala = 2.0f)
 {
     const int LARGURA = 3;
@@ -884,6 +926,13 @@ void desenhaCasa(glm::vec3 pos, float rotY = 0.0f, float escala = 2.0f)
     }
 }
 
+void desenhaCasas()
+{
+    for (const Transformacao &casa : CASAS) {
+        desenhaCasa(casa.posicao, casa.rotacaoY, casa.escala);
+    }
+}
+
 // A mesma composição é usada na câmera principal e no minimapa.
 void desenhaVila()
 {
@@ -891,10 +940,8 @@ void desenhaVila()
     desenhaEstrada();
     desenhaPinheiro();
     desenhaBarraca();
-
-    for (const Transformacao &casa : CASAS) {
-        desenhaCasa(casa.posicao, casa.rotacaoY, casa.escala);
-    }
+    desenhaCharacter();
+    desenhaCasas();
 }
 
 void inicializaRenderizacao()
