@@ -36,7 +36,7 @@ FetchContent_MakeAvailable(stb_image)
 
 # Adiciona as pastas de cabeçalhos
 include_directories(${CMAKE_SOURCE_DIR}/include)
-include_directories(${CMAKE_SOURCE_DIR}/common)
+include_directories(${CMAKE_SOURCE_DIR}/Common)
 include_directories(${CMAKE_SOURCE_DIR}/include/glad)
 include_directories(${glm_SOURCE_DIR})
 include_directories(${stb_image_SOURCE_DIR})
@@ -61,11 +61,11 @@ else()
 endif()
 
 # Caminho esperado para a GLAD
-set(GLAD_C_FILE "${CMAKE_SOURCE_DIR}/common/glad.c")
+set(GLAD_C_FILE "${CMAKE_SOURCE_DIR}/Common/glad.c")
 
 # Verifica se os arquivos da GLAD estão no lugar
 if (NOT EXISTS ${GLAD_C_FILE})
-    message(FATAL_ERROR "Arquivo glad.c não encontrado! Baixe a GLAD manualmente em https://glad.dav1d.de/ e coloque glad.h em include/glad/ e glad.c em common/")
+    message(FATAL_ERROR "Arquivo glad.c não encontrado! Baixe a GLAD manualmente em https://glad.dav1d.de/ e coloque glad.h em include/glad/ e glad.c em Common/")
 endif()
 
 # Cria os executáveis

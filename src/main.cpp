@@ -17,6 +17,15 @@ using namespace std;
 GLFWwindow *Window = nullptr;
 GLuint Shader_programm = 0;
 
+//SOL
+GLuint vaoSol = 0;
+GLuint vboSol = 0;
+int nVerticesSol = 0;
+
+// Aponta para cima e à frente da câmera inicial.
+const glm::vec3 DIRECAO_PARA_SOL =
+    glm::normalize(glm::vec3(0.5f, 0.8f, -1.0f));
+
 //CHÃO
 GLuint Vao = 0;
 int NVertices;
@@ -401,6 +410,74 @@ void inicializaOpenGL()
     std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
 }
 
+void inicializaSol()
+{
+    const int faixas = 12;
+    const int setores = 24;
+    const float PI = 3.14159265f;
+
+    vector<float> vertices;
+
+    auto ponto = [&](int faixa, int setor) {
+        float latitude = -PI / 2.0f + PI * faixa / faixas;
+        float longitude = 2.0f * PI * setor / setores;
+
+        return glm::vec3(
+            cos(latitude) * cos(longitude),
+            sin(latitude),
+            cos(latitude) * sin(longitude)
+        );
+    };
+
+    auto adiciona = [&](glm::vec3 p) {
+        vertices.push_back(p.x);
+        vertices.push_back(p.y);
+        vertices.push_back(p.z);
+    };
+
+    for (int i = 0; i < faixas; i++) {
+        for (int j = 0; j < setores; j++) {
+            glm::vec3 a = ponto(i, j);
+            glm::vec3 b = ponto(i, j + 1);
+            glm::vec3 c = ponto(i + 1, j);
+            glm::vec3 d = ponto(i + 1, j + 1);
+
+            // Dois triângulos por região da esfera.
+            adiciona(a);
+            adiciona(b);
+            adiciona(c);
+
+            adiciona(b);
+            adiciona(d);
+            adiciona(c);
+        }
+    }
+
+    nVerticesSol = static_cast<int>(vertices.size() / 3);
+
+    glGenVertexArrays(1, &vaoSol);
+    glGenBuffers(1, &vboSol);
+
+    glBindVertexArray(vaoSol);
+    glBindBuffer(GL_ARRAY_BUFFER, vboSol);
+
+    glBufferData(
+        GL_ARRAY_BUFFER,
+        vertices.size() * sizeof(float),
+        vertices.data(),
+        GL_STATIC_DRAW
+    );
+
+    glVertexAttribPointer(
+        0, 3, GL_FLOAT, GL_FALSE,
+        3 * sizeof(float), nullptr
+    );
+    glEnableVertexAttribArray(0);
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
 void inicializaObjetos()
 {
     texture1 = carregaTextura("../assets/Modelos3D/colormap.png");
@@ -420,6 +497,7 @@ void inicializaObjetos()
     telhado      = carregaModelo(pasta + "roof.obj",              texturaEstrada);
     telhadoCanto = carregaModelo(pasta + "roof-corner.obj",       texturaEstrada);
 
+    inicializaSol();
     inicializaTerreno();
 }
 
@@ -449,6 +527,8 @@ void inicializaShaders()
         glGetShaderInfoLog(vs, 512, NULL, infoLog);
         std::cerr << "Erro no vertex shader:\n"
                   << infoLog << std::endl;
+        glfwTerminate();
+        exit(EXIT_FAILURE);
     }
 
     // 3. Compila o fragment shader shader
@@ -462,6 +542,8 @@ void inicializaShaders()
         glGetShaderInfoLog(fs, 512, NULL, infoLog);
         std::cerr << "Erro no fragment shader:\n"
                   << infoLog << std::endl;
+        glfwTerminate();
+        exit(EXIT_FAILURE);
     }
 
     // 5. Especificação do Shader Programm
@@ -476,10 +558,42 @@ void inicializaShaders()
         glGetProgramInfoLog(Shader_programm, 512, NULL, infoLog);
         std::cerr << "Erro na linkagem do shader:\n"
                   << infoLog << std::endl;
+        glfwTerminate();
+        exit(EXIT_FAILURE);
     }
 
     glDeleteShader(vs);
     glDeleteShader(fs);
+
+    // Define os parâmetros da iluminação.
+    glUseProgram(Shader_programm);
+    glm::vec3 direcaoRaios = -DIRECAO_PARA_SOL;
+
+    glUniform3f(
+        glGetUniformLocation(Shader_programm, "direcaoLuz"),
+        direcaoRaios.x,
+        direcaoRaios.y,
+        direcaoRaios.z
+    );
+
+    glUniform1i(
+        glGetUniformLocation(Shader_programm, "desenhaSol"),
+        GL_FALSE
+    );
+
+    glUniform1i(
+        glGetUniformLocation(Shader_programm, "texture1"), 0
+    );
+
+    glUniform3f(
+        glGetUniformLocation(Shader_programm, "corLuz"),
+        1.0f, 0.95f, 0.85f
+    );
+
+    glUniform1f(
+        glGetUniformLocation(Shader_programm, "intensidadeAmbiente"),
+        0.25f
+    );
 }
 
 void atualizaDirecaoCamera()
@@ -586,6 +700,28 @@ void trataTeclado()
     {
         Cam_pos.y -= Cam_speed * Tempo_entre_frames;
     }
+}
+
+void desenhaSol()
+{
+    glm::vec3 posicao = Cam_pos + DIRECAO_PARA_SOL * 120.0f;
+
+    glm::mat4 modelo = glm::translate(glm::mat4(1.0f), posicao);
+    modelo = glm::scale(modelo, glm::vec3(6.0f));
+
+    glUniformMatrix4fv(
+        glGetUniformLocation(Shader_programm, "matriz"),
+        1, GL_FALSE, glm::value_ptr(modelo)
+    );
+
+    GLint modoSol = glGetUniformLocation(Shader_programm, "desenhaSol");
+    glUniform1i(modoSol, GL_TRUE);
+
+    glBindVertexArray(vaoSol);
+    glDrawArrays(GL_TRIANGLES, 0, nVerticesSol);
+    glBindVertexArray(0);
+
+    glUniform1i(modoSol, GL_FALSE);
 }
 
 void desenhaChao() {
@@ -697,7 +833,6 @@ void desenhaCasa(glm::vec3 pos, float rotY = 0.0f, float escala = 2.0f)
     }
 }
 
-
 void inicializaRenderizacao()
 {
     double tempo_anterior = glfwGetTime();
@@ -734,6 +869,8 @@ void inicializaRenderizacao()
 
         glViewport(0, 0, FB_WIDTH, FB_HEIGHT);
         inicializaCamera();
+
+        desenhaSol();
         desenhaChao();
         desenhaEstrada();
         desenhaPinheiro();
@@ -761,6 +898,8 @@ void inicializaRenderizacao()
         glfwSwapBuffers(Window);
     }
 
+    glDeleteBuffers(1, &vboSol);
+    glDeleteVertexArrays(1, &vaoSol);
     glfwTerminate();
 }
 
