@@ -68,6 +68,7 @@ const Transformacao CASAS[] = {
 };
 
 const Transformacao BARRACA = {
+    // Barraca comerciante
     glm::vec3(3.5f, 0.0f, -50.0f), 0.0f, 2.0f
 };
 
@@ -80,7 +81,9 @@ struct Personagem {
 // Cada entrada escolhe um modelo e sua posição, rotação e escala.
 // O modelo é carregado uma vez em inicializaObjetos() e compartilhado pelas cópias.
 const Personagem CHARACTERS[] = {
+    // Comerciante da barraca
     {&charBarraca, {glm::vec3(4.7f, 0.0f, -50.0f), -90.0f, 2.0f}},
+    // Senhor entrando na casa
     {&charBarraca, {glm::vec3(-5.0f, 0.0f, -20.0f), -90.0f, 2.0f}}
 };
 
