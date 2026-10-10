@@ -22,10 +22,6 @@ GLuint vaoSol = 0;
 GLuint vboSol = 0;
 int nVerticesSol = 0;
 
-// Aponta para cima e à frente da câmera inicial.
-const glm::vec3 DIRECAO_PARA_SOL =
-    glm::normalize(glm::vec3(0.5f, 0.8f, -1.0f));
-
 //CHÃO
 GLuint Vao = 0;
 int NVertices;
@@ -41,7 +37,55 @@ GLuint VaoPinheiro = 0;
 int NVerticesPinheiro;
 GLuint texturaPinheiro;
 
-//TERRENO
+// BARRACA VERDE
+GLuint VaoBarraca = 0;
+int NVerticesBarraca;
+GLuint texturaBarraca;
+
+
+// TRANSFORMAÇÕES DOS OBJETOS
+// Posição no mundo (X, Y, Z), rotação em torno de Y em graus e escala uniforme.
+struct Transformacao {
+    glm::vec3 posicao;
+    float rotacaoY;
+    float escala;
+};
+
+const Transformacao CASAS[] = {
+    {glm::vec3(-8.0f, 0.0f, -20.0f),  90.0f, 2.0f},
+    {glm::vec3( 8.0f, 0.0f, -34.0f), -90.0f, 2.0f}
+};
+
+const Transformacao BARRACA = {
+    glm::vec3(3.5f, 0.0f, -50.0f), 180.0f, 2.0f
+};
+
+// Sol: direção a partir da câmera, distância e raio.
+// Aponta para cima e à frente da câmera inicial.
+const glm::vec3 DIRECAO_PARA_SOL =
+    glm::normalize(glm::vec3(0.5f, 0.8f, -1.0f));
+
+const float DISTANCIA_SOL = 120.0f;
+const float RAIO_SOL = 6.0f;
+
+// Distribuição dos trechos da estrada e das fileiras de pinheiros.
+const int ESTRADA_Z_INICIO = -59;
+const int ESTRADA_Z_FIM = 0;
+const glm::vec3 ESCALA_ESTRADA(2.0f, 1.0f, 2.0f);
+const float ESPACAMENTO_ESTRADA = 2.0f;
+const int PINHEIROS_Z_INICIO = -59;
+const int PINHEIROS_Z_FIM = 0;
+const int PASSO_PINHEIROS = 10;
+const float ESPACAMENTO_PINHEIROS_Z = 2.0f;
+const float AFASTAMENTO_PINHEIROS_X = 2.0f;
+const float ALTURA_PINHEIROS = 0.0f;
+const float ESCALA_PINHEIROS = 2.0f;
+
+// Grade do terreno: espaçamento horizontal e altura da base.
+const float ESPACAMENTO_TERRENO = 2.0f;
+const float ALTURA_BASE_TERRENO = -0.5f;
+
+//TERRENO: limites, colinas e áreas planas da vila.
 const float PASSO_TERRENO = 0.5f;
 const int TERRENO_X_MIN = -25, TERRENO_X_MAX = 25;
 const int Z_FIM = -59;
@@ -85,7 +129,7 @@ void inicializaTerreno() {
     for (int bz = Z_FIM; bz <= 0; bz++)
         for (int bx = TERRENO_X_MIN; bx <= TERRENO_X_MAX; bx++)
             niveisTerreno[indiceTerreno(bx, bz)] =
-                (int)std::lround(alturaTerreno(bx * 2.0f, bz * 2.0f) / PASSO_TERRENO);
+                (int)std::lround(alturaTerreno(bx * ESPACAMENTO_TERRENO, bz * ESPACAMENTO_TERRENO) / PASSO_TERRENO);
 }
 int nivelTerreno(int bx, int bz, int padrao) {
     if (bx < TERRENO_X_MIN || bx > TERRENO_X_MAX || bz < Z_FIM || bz > 0) return padrao;
@@ -99,7 +143,7 @@ struct Modelo {
     GLuint textura = 0;
 };
 
-Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto;
+Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto, barracaVerde;
 
 int WIDTH = 1000;
 int HEIGHT = 800; 
@@ -496,6 +540,7 @@ void inicializaObjetos()
     paredeCanto  = carregaModelo(pasta + "wall-corner.obj",       texturaEstrada);
     telhado      = carregaModelo(pasta + "roof.obj",              texturaEstrada);
     telhadoCanto = carregaModelo(pasta + "roof-corner.obj",       texturaEstrada);
+    barracaVerde = carregaModelo(pasta + "stall-green.obj",       texturaEstrada);
 
     inicializaSol();
     inicializaTerreno();
@@ -704,10 +749,10 @@ void trataTeclado()
 
 void desenhaSol()
 {
-    glm::vec3 posicao = Cam_pos + DIRECAO_PARA_SOL * 120.0f;
+    glm::vec3 posicao = Cam_pos + DIRECAO_PARA_SOL * DISTANCIA_SOL;
 
     glm::mat4 modelo = glm::translate(glm::mat4(1.0f), posicao);
-    modelo = glm::scale(modelo, glm::vec3(6.0f));
+    modelo = glm::scale(modelo, glm::vec3(RAIO_SOL));
 
     glUniformMatrix4fv(
         glGetUniformLocation(Shader_programm, "matriz"),
@@ -732,12 +777,10 @@ void desenhaChao() {
     glBindVertexArray(Vao);
 
     auto bloco = [&](int x, int z, float y) {
-        glm::mat4 t = glm::translate(glm::mat4(1.0f), glm::vec3(x * 2.0f, y, z * 2.0f));
+        glm::mat4 t = glm::translate(glm::mat4(1.0f), glm::vec3(x * ESPACAMENTO_TERRENO, y, z * ESPACAMENTO_TERRENO));
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(t));
         glDrawArrays(GL_TRIANGLES, 0, NVertices);
     };
-
-    const float Y_BASE = -0.5f;   // a mesma altura do chão plano de antes
 
     for (int x = TERRENO_X_MIN; x <= TERRENO_X_MAX; x++) {
         for (int z = Z_FIM; z <= 0; z++) {
@@ -745,9 +788,9 @@ void desenhaChao() {
             int viz = std::min(std::min(nivelTerreno(x + 1, z, n), nivelTerreno(x - 1, z, n)),
                                std::min(nivelTerreno(x, z + 1, n), nivelTerreno(x, z - 1, n)));
 
-            bloco(x, z, Y_BASE + n * PASSO_TERRENO);                 // bloco do topo
+            bloco(x, z, ALTURA_BASE_TERRENO + n * PASSO_TERRENO);                 // bloco do topo
             for (int k = n - 1; k > viz; k--)                        // preenche vãos nas encostas
-                bloco(x, z, Y_BASE + k * PASSO_TERRENO);
+                bloco(x, z, ALTURA_BASE_TERRENO + k * PASSO_TERRENO);
         }
     }
 }  
@@ -759,10 +802,10 @@ void desenhaEstrada() {
     glBindTexture(GL_TEXTURE_2D, texturaEstrada);
     glBindVertexArray(VaoEstrada);
 
-    for (int z = -59; z <= 0; z++) {
+    for (int z = ESTRADA_Z_INICIO; z <= ESTRADA_Z_FIM; z++) {
         glm::mat4 transformacao = glm::mat4(1.0f);
-        transformacao = glm::translate(transformacao, glm::vec3(0 * 2.0f, 0.0f, z * 2.0f));
-        transformacao = glm::scale(transformacao, glm::vec3(2.0f, 1.0f, 2.0f));
+        transformacao = glm::translate(transformacao, glm::vec3(0.0f, 0.0f, z * ESPACAMENTO_ESTRADA));
+        transformacao = glm::scale(transformacao, ESCALA_ESTRADA);
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
 
         glDrawArrays(GL_TRIANGLES, 0, NVerticesEstrada);
@@ -776,18 +819,26 @@ void desenhaPinheiro() {
     glBindTexture(GL_TEXTURE_2D, texturaPinheiro);
     glBindVertexArray(VaoPinheiro);
 
-    for (int z = -59; z <= 0; z += 10) {
+    for (int z = PINHEIROS_Z_INICIO; z <= PINHEIROS_Z_FIM; z += PASSO_PINHEIROS) {
 
         for (int lado = -1; lado <= 1; lado += 2) {
             glm::mat4 transformacao = glm::mat4(1.0f);
-            transformacao = glm::translate(transformacao, glm::vec3(lado * 2.0f, 0.0f, z * 2.0f));
-            transformacao = glm::scale(transformacao, glm::vec3(2.0f)); // dobra o tamanho do pinheiro
+            transformacao = glm::translate(transformacao, glm::vec3(lado * AFASTAMENTO_PINHEIROS_X, ALTURA_PINHEIROS, z * ESPACAMENTO_PINHEIROS_Z));
+            transformacao = glm::scale(transformacao, glm::vec3(ESCALA_PINHEIROS));
             glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
 
             glDrawArrays(GL_TRIANGLES, 0, NVerticesPinheiro);
+        }
     }
 }
-    }
+
+void desenhaBarraca() {
+    glm::mat4 modelo = glm::translate(glm::mat4(1.0f), BARRACA.posicao);
+    modelo = glm::rotate(modelo, glm::radians(BARRACA.rotacaoY), glm::vec3(0, 1, 0));
+    modelo = glm::scale(modelo, glm::vec3(BARRACA.escala));
+
+    desenhaModelo(barracaVerde, modelo);
+}
 
 void desenhaCasa(glm::vec3 pos, float rotY = 0.0f, float escala = 2.0f)
 {
@@ -833,6 +884,19 @@ void desenhaCasa(glm::vec3 pos, float rotY = 0.0f, float escala = 2.0f)
     }
 }
 
+// A mesma composição é usada na câmera principal e no minimapa.
+void desenhaVila()
+{
+    desenhaChao();
+    desenhaEstrada();
+    desenhaPinheiro();
+    desenhaBarraca();
+
+    for (const Transformacao &casa : CASAS) {
+        desenhaCasa(casa.posicao, casa.rotacaoY, casa.escala);
+    }
+}
+
 void inicializaRenderizacao()
 {
     double tempo_anterior = glfwGetTime();
@@ -871,11 +935,7 @@ void inicializaRenderizacao()
         inicializaCamera();
 
         desenhaSol();
-        desenhaChao();
-        desenhaEstrada();
-        desenhaPinheiro();
-        desenhaCasa(glm::vec3(-8.0f, 0.0f, -20.0f),  90.0f);
-        desenhaCasa(glm::vec3( 8.0f, 0.0f, -34.0f), -90.0f);
+        desenhaVila();
 
         int tamanhoMinimapa = 180;
         int margem = 5;
@@ -888,11 +948,7 @@ void inicializaRenderizacao()
         glDisable(GL_SCISSOR_TEST);
 
         inicializaCameraMinimapa();
-        desenhaChao();
-        desenhaEstrada();
-        desenhaPinheiro();
-        desenhaCasa(glm::vec3(-8.0f, 0.0f, -20.0f),  90.0f);
-        desenhaCasa(glm::vec3( 8.0f, 0.0f, -34.0f), -90.0f);
+        desenhaVila();
 
         glfwPollEvents();
         glfwSwapBuffers(Window);
