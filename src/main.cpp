@@ -50,19 +50,27 @@ struct Modelo {
     GLuint vao = 0;
     int nVertices = 0;
     GLuint textura = 0;
-    glm::vec3 minimo = glm::vec3(0.0f);
-    glm::vec3 maximo = glm::vec3(0.0f);
 };
-
-Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto, barracaVerde, charBarraca, moinhoBase, moinhoMadeira, moinhoTelhado, moinhoPas, poste;
+Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto, barracaVerde, charBarraca;
+Modelo moinhoBase, moinhoMadeira, moinhoTelhado, moinhoPas, poste;
 Modelo cerca, portao, carrinho, planta, flores, barril, caixa, pedras, placa, cogumelos;
 
 // TRANSFORMAÇÕES DOS OBJETOS
-// Posição no mundo (X, Y, Z), rotação em torno de Y em graus e escala uniforme.
+// Posição (X, Y, Z), rotação em torno de Y em graus e escala uniforme
 struct Transformacao {
     glm::vec3 posicao;
     float rotacaoY;
     float escala;
+};
+
+struct Decoracao {
+    const Modelo *modelo;
+    Transformacao transformacao;
+};
+
+struct Personagem {
+    const Modelo *modelo;
+    Transformacao transformacao;
 };
 
 const Transformacao CASAS[] = {
@@ -80,11 +88,8 @@ const Transformacao BARRACA = {
 const Transformacao MOINHO = {
     glm::vec3(8.0f, 0.0f, -8.0f), 180.0f, 2.0f
 };
+const float VELOCIDADE_PAS = 1.0f; // radianos por segundo
 
-struct Decoracao {
-    const Modelo *modelo;
-    Transformacao transformacao;
-};
 const Decoracao DECORACOES[] = {
     {&caixa,  {glm::vec3(-5.5f, 0.0f, -16.5f), 15.0f, 2.0f}},
     {&barril, {glm::vec3(-4.8f, 0.0f, -15.4f), 0.0f, 2.0f}},
@@ -109,33 +114,6 @@ const float ROT_CERCA_Z = 0.0f;
 const float ESCALA_PLANTAS = 1.0f;
 const float CERCA_DESLOC = 0.45f;
 
-const float VELOCIDADE_PAS = 1.0f; // radianos por segundo
-
-bool moinhoLigado = true;
-float anguloPas = 0.0f;
-bool teclaMAnterior = false;
-bool ehNoite = false;          
-bool teclaNAnterior = false;
-bool desenhandoMinimapa = false; // verdadeiro enquanto a cena é desenhada no minimapa
-
-
-// Postes: intercalados com os pinheiros, mais perto da estrada.
-const int POSTES_Z_INICIO = -54;
-const int POSTES_Z_FIM = 0;
-const int PASSO_POSTES = 4;
-const float AFASTAMENTO_POSTES_X = 1.3f;
-const float ESCALA_POSTES = 2.0f;
-const float ALTURA_LAMPADA = 1.40f * ESCALA_POSTES;
-const float RAIO_LAMPADA = 0.2f;
-const float RAIO_MARCADOR_MINIMAPA = 0.6f; // raio do ponto que representa cada poste no minimapa
-
-struct Personagem {
-    const Modelo *modelo;
-    Transformacao transformacao;
-};
-
-// Cada entrada escolhe um modelo e sua posição, rotação e escala.
-// O modelo é carregado uma vez em inicializaObjetos() e compartilhado pelas cópias.
 const Personagem CHARACTERS[] = {
     // Comerciante da barraca
     {&charBarraca, {glm::vec3(4.7f, 0.0f, -50.0f), -90.0f, 2.0f}},
@@ -149,6 +127,31 @@ const Personagem CHARACTERS[] = {
 };
 
 
+
+
+// variáveis para controlar funções
+bool moinhoLigado = true;
+float anguloPas = 0.0f;
+bool teclaMAnterior = false;
+bool ehNoite = false;          
+bool teclaNAnterior = false;
+bool desenhandoMinimapa = false; // verdadeiro enquanto a cena é desenhada no minimapa
+
+
+
+
+// Postes: intercalados com os pinheiros, mais perto da estrada.
+const int POSTES_Z_INICIO = -54;
+const int POSTES_Z_FIM = 0;
+const int PASSO_POSTES = 4;
+const float AFASTAMENTO_POSTES_X = 1.3f;
+const float ESCALA_POSTES = 2.0f;
+const float ALTURA_LAMPADA = 1.40f * ESCALA_POSTES;
+const float RAIO_LAMPADA = 0.2f;
+const float RAIO_MARCADOR_MINIMAPA = 0.6f; // raio do ponto que representa cada poste no minimapa
+
+
+
 // Sol: direção a partir da câmera, distância e raio.
 // Aponta para cima e à frente da câmera inicial.
 const glm::vec3 DIRECAO_PARA_SOL =
@@ -156,6 +159,8 @@ const glm::vec3 DIRECAO_PARA_SOL =
 
 const float DISTANCIA_SOL = 120.0f;
 const float RAIO_SOL = 6.0f;
+
+
 
 // Distribuição dos trechos da estrada e das fileiras de pinheiros.
 const int ESTRADA_Z_INICIO = -59;
@@ -169,6 +174,8 @@ const float ESPACAMENTO_PINHEIROS_Z = 2.0f;
 const float AFASTAMENTO_PINHEIROS_X = 2.0f;
 const float ALTURA_PINHEIROS = 0.0f;
 const float ESCALA_PINHEIROS = 2.0f;
+
+
 
 // Grade do terreno: espaçamento horizontal e altura da base.
 const float ESPACAMENTO_TERRENO = 2.0f;
@@ -233,6 +240,8 @@ int nivelTerreno(int bx, int bz, int padrao) {
     return niveisTerreno[indiceTerreno(bx, bz)];
 }
 
+
+// VARIÁVEIS PADRÃO DOS PROGRAMAS
 int WIDTH = 1000;
 int HEIGHT = 800; 
 int FB_WIDTH = 0;
@@ -1212,9 +1221,6 @@ void inicializaRenderizacao()
             anguloPas += VELOCIDADE_PAS * Tempo_entre_frames;
         }
         
-        // Ativa Gaveta 0
-        // glBindTexture(GL_TEXTURE_2D, texture1); // Pluga a Textura 1 nela
-        // glBindVertexArray(Vao);
 
         glm::mat4 transformacao = glm::mat4(1.0f);
         transformacao = glm::translate(transformacao, glm::vec3(0.0f, -2.0f, 0.0f));
