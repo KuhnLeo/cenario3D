@@ -10,14 +10,18 @@ uniform vec3 direcaoLuz;
 uniform vec3 corLuz;
 uniform float intensidadeAmbiente;
 uniform bool desenhaSol;
+uniform bool ehNoite;
 
 out vec4 frag_colour;
 
 void main () {
     if (desenhaSol) {
-        frag_colour = vec4(1.0, 0.85, 0.2, 1.0);
+        frag_colour = ehNoite
+            ? vec4(0.772, 0.772, 0.772, 1.0)
+            : vec4(1.0, 0.85, 0.2, 1.0);
         return;
     }
+
     vec4 textura = texture(texture1, TexCoord);
 
     vec3 normal = normalize(Normal);

@@ -820,7 +820,7 @@ void aplicaIluminacao() {
     }
 }
 
-void desenhaSol()
+void desenhaCorpoSeleste()
 {
     glm::vec3 posicao = Cam_pos + DIRECAO_PARA_SOL * DISTANCIA_SOL;
 
@@ -834,6 +834,7 @@ void desenhaSol()
 
     GLint modoSol = glGetUniformLocation(Shader_programm, "desenhaSol");
     glUniform1i(modoSol, GL_TRUE);
+    glUniform1i(glGetUniformLocation(Shader_programm, "ehNoite"), ehNoite);
 
     glBindVertexArray(vaoSol);
     glDrawArrays(GL_TRIANGLES, 0, nVerticesSol);
@@ -1008,13 +1009,18 @@ void desenhaLampada(glm::vec3 posicao, float raio) {
     modelo = glm::scale(modelo, glm::vec3(raio));
 
     glUniformMatrix4fv(glGetUniformLocation(Shader_programm, "matriz"), 1, GL_FALSE, glm::value_ptr(modelo));
+   
     GLint modoSol = glGetUniformLocation(Shader_programm, "desenhaSol");
+    GLint modoNoite = glGetUniformLocation(Shader_programm, "ehNoite");
+
     glUniform1i(modoSol, GL_TRUE);
+    glUniform1i(modoNoite, GL_FALSE);
 
     glBindVertexArray(vaoSol);
     glDrawArrays(GL_TRIANGLES, 0, nVerticesSol);
     
     glUniform1i(modoSol, GL_FALSE);
+    glUniform1i(modoNoite, ehNoite); 
 }
 
 void desenhaPostes(){
@@ -1097,10 +1103,7 @@ void inicializaRenderizacao()
 
         glViewport(0, 0, FB_WIDTH, FB_HEIGHT);
         inicializaCamera();
-
-        if (!ehNoite){
-        desenhaSol();
-        } 
+        desenhaCorpoSeleste();
         desenhaVila();
 
         int tamanhoMinimapa = 180;
