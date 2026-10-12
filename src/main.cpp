@@ -52,7 +52,7 @@ struct Modelo {
     GLuint textura = 0;
 };
 
-Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto, barracaVerde, charBarraca;
+Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto, barracaVerde, charBarraca, moinhoBase, moinhoMadeira, moinhoTelhado, moinhoPas, poste;
 
 // TRANSFORMAÇÕES DOS OBJETOS
 // Posição no mundo (X, Y, Z), rotação em torno de Y em graus e escala uniforme.
@@ -72,6 +72,29 @@ const Transformacao BARRACA = {
     glm::vec3(3.5f, 0.0f, -50.0f), 0.0f, 2.0f
 };
 
+const Transformacao MOINHO = {
+    glm::vec3(8.0f, 0.0f, -8.0f), 180.0f, 2.0f
+};
+
+const float VELOCIDADE_PAS = 1.0f; // radianos por segundo
+
+bool moinhoLigado = true;
+float anguloPas = 0.0f;
+bool teclaMAnterior = false;
+bool ehNoite = false;          
+bool teclaNAnterior = false;
+bool desenhandoMinimapa = false; // verdadeiro enquanto a cena é desenhada no minimapa
+
+
+// Postes: intercalados com os pinheiros, mais perto da estrada.
+const int POSTES_Z_INICIO = -54;
+const int POSTES_Z_FIM = 0;
+const int PASSO_POSTES = 4;
+const float AFASTAMENTO_POSTES_X = 1.3f;
+const float ESCALA_POSTES = 2.0f;
+const float ALTURA_LAMPADA = 1.40f * ESCALA_POSTES;
+const float RAIO_LAMPADA = 0.2f;
+const float RAIO_MARCADOR_MINIMAPA = 0.6f; // raio do ponto que representa cada poste no minimapa
 
 struct Personagem {
     const Modelo *modelo;
@@ -562,6 +585,11 @@ void inicializaObjetos()
     telhadoCanto = carregaModelo(pasta + "roof-corner.obj",       texturaEstrada);
     barracaVerde = carregaModelo(pasta + "stall-green.obj",       texturaEstrada);
     charBarraca = carregaModelo(pasta + "character-male-b.obj",   texturaCharacter);
+    moinhoBase    = carregaModelo(pasta + "wall-block.obj",      texturaEstrada);
+    moinhoMadeira = carregaModelo(pasta + "wall-wood-block.obj", texturaEstrada);
+    moinhoTelhado = carregaModelo(pasta + "roof-high-point.obj", texturaEstrada);
+    moinhoPas     = carregaModelo(pasta + "windmill.obj",        texturaEstrada);
+    poste         = carregaModelo(pasta + "lantern.obj",         texturaEstrada);
 
 
     inicializaSol();
@@ -767,6 +795,29 @@ void trataTeclado()
     {
         Cam_pos.y -= Cam_speed * Tempo_entre_frames;
     }
+    bool teclaM = glfwGetKey(Window, GLFW_KEY_M) == GLFW_PRESS;
+    if (teclaM && !teclaMAnterior) {
+        moinhoLigado = !moinhoLigado;
+    }
+    teclaMAnterior = teclaM;
+    bool teclaN = glfwGetKey(Window, GLFW_KEY_N) == GLFW_PRESS;
+    if (teclaN && !teclaNAnterior) {
+        ehNoite = !ehNoite;
+    }
+    teclaNAnterior = teclaN;
+}
+
+void aplicaIluminacao() {
+    GLint locCor = glGetUniformLocation(Shader_programm, "corLuz");
+    GLint locAmbiente = glGetUniformLocation(Shader_programm, "intensidadeAmbiente");
+
+    if (ehNoite){
+        glUniform3f(locCor, 0.25f, 0.30f, 0.45f);
+        glUniform1f(locAmbiente, 0.15f);
+    } else {
+        glUniform3f(locCor, 1.0f, 0.95f, 0.85f);
+        glUniform1f(locAmbiente, 0.25f);
+    }
 }
 
 void desenhaSol()
@@ -936,6 +987,56 @@ void desenhaCasas()
     }
 }
 
+void desenhaMoinho(){
+    glm::mat4 base = glm::mat4(1.0f);
+    base = glm::translate(base, MOINHO.posicao);
+    base = glm::rotate(base, glm::radians(MOINHO.rotacaoY), glm::vec3(0,1,0));
+    base = glm::scale(base, glm::vec3(MOINHO.escala));
+
+    desenhaModelo(moinhoBase, base);
+    desenhaModelo(moinhoMadeira, glm::translate(base, glm::vec3(0.0f, 1.0f, 0.0f)));
+    desenhaModelo(moinhoMadeira, glm::translate(base, glm::vec3(0.0f, 2.0f, 0.0f)));
+    desenhaModelo(moinhoTelhado, glm::translate(base, glm::vec3(0.0f, 3.0f, 0.0f)));
+
+    glm::mat4 pas = glm::translate(base, glm::vec3(0.75f, 2.5f, 0.0f));
+    pas = glm::rotate(pas, anguloPas, glm::vec3(1, 0, 0));
+    desenhaModelo(moinhoPas, pas);
+}
+
+void desenhaLampada(glm::vec3 posicao, float raio) {
+    glm::mat4 modelo = glm::translate(glm::mat4(1.0f), posicao);
+    modelo = glm::scale(modelo, glm::vec3(raio));
+
+    glUniformMatrix4fv(glGetUniformLocation(Shader_programm, "matriz"), 1, GL_FALSE, glm::value_ptr(modelo));
+    GLint modoSol = glGetUniformLocation(Shader_programm, "desenhaSol");
+    glUniform1i(modoSol, GL_TRUE);
+
+    glBindVertexArray(vaoSol);
+    glDrawArrays(GL_TRIANGLES, 0, nVerticesSol);
+    
+    glUniform1i(modoSol, GL_FALSE);
+}
+
+void desenhaPostes(){
+    for (int z = POSTES_Z_INICIO; z <= POSTES_Z_FIM; z += PASSO_POSTES) {
+        for (int lado = -1; lado <= 1; lado += 2) {
+            glm::mat4 matriz = glm::mat4(1.0f);
+            matriz = glm::translate(matriz, glm::vec3(lado * AFASTAMENTO_POSTES_X, 0.0f, z * 2.0f));
+            matriz =glm::scale(matriz, glm::vec3(ESCALA_POSTES));
+
+            desenhaModelo(poste, matriz);  
+
+            glm::vec3 posLampada(lado * AFASTAMENTO_POSTES_X, ALTURA_LAMPADA, z * 2.0f);
+
+            if (desenhandoMinimapa) {
+                desenhaLampada(posLampada, RAIO_MARCADOR_MINIMAPA); // marcador ampliado, sempre visível
+            } else if (ehNoite) {
+                desenhaLampada(posLampada, RAIO_LAMPADA);           // globo de luz normal
+            }
+        }
+    }
+}
+
 // A mesma composição é usada na câmera principal e no minimapa.
 void desenhaVila()
 {
@@ -945,6 +1046,8 @@ void desenhaVila()
     desenhaBarraca();
     desenhaCharacter();
     desenhaCasas();
+    desenhaMoinho();
+    desenhaPostes();
 }
 
 void inicializaRenderizacao()
@@ -961,14 +1064,25 @@ void inicializaRenderizacao()
         Tempo_entre_frames = (float)(tempo_frame_atual - tempo_anterior);
         tempo_anterior = tempo_frame_atual;
 
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        if (ehNoite) {
+            glClearColor(0.02f, 0.03f, 0.08f, 1.0f);
+        } else {
+            glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        
+        }
+        
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(Shader_programm);
+        aplicaIluminacao();
 
         trataTeclado();
 
         glActiveTexture(GL_TEXTURE0);
+
+        if (moinhoLigado){
+            anguloPas += VELOCIDADE_PAS * Tempo_entre_frames;
+        }
         
         // Ativa Gaveta 0
         // glBindTexture(GL_TEXTURE_2D, texture1); // Pluga a Textura 1 nela
@@ -984,7 +1098,9 @@ void inicializaRenderizacao()
         glViewport(0, 0, FB_WIDTH, FB_HEIGHT);
         inicializaCamera();
 
+        if (!ehNoite){
         desenhaSol();
+        } 
         desenhaVila();
 
         int tamanhoMinimapa = 180;
@@ -998,7 +1114,9 @@ void inicializaRenderizacao()
         glDisable(GL_SCISSOR_TEST);
 
         inicializaCameraMinimapa();
+        desenhandoMinimapa = true;
         desenhaVila();
+        desenhandoMinimapa = false;
 
         glfwPollEvents();
         glfwSwapBuffers(Window);
