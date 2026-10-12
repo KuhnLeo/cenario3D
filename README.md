@@ -34,9 +34,8 @@ Após configurar o ambiente conforme o guia do repositório base:
 
 ```bash
 # Na raiz do projeto
-cmake -S . -B build
-cmake --build build
 cd build
+cmake --build .
 ./main
 ```
 
