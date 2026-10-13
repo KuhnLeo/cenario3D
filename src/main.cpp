@@ -11,7 +11,6 @@
 #include <vector>
 #include <string>
 #include <cmath>
-#include <climits>
 using namespace std;
 
 GLFWwindow *Window = nullptr;
@@ -24,23 +23,21 @@ int nVerticesSol = 0;
 
 //CHÃO
 GLuint Vao = 0;
+GLuint vboChao = 0;
 int NVertices;
 unsigned int texture1;
 
 //ESTRADA
 GLuint VaoEstrada = 0;
+GLuint vboEstrada = 0;
 int NVerticesEstrada;
 GLuint texturaEstrada;
 
 //PINHEIRO
 GLuint VaoPinheiro = 0;
+GLuint vboPinheiro = 0;
 int NVerticesPinheiro;
 GLuint texturaPinheiro;
-
-// BARRACA
-GLuint VaoBarraca = 0;
-int NVerticesBarraca;
-GLuint texturaBarraca;
 
 // CHARACTER
 GLuint texturaCharacter;
@@ -48,10 +45,11 @@ GLuint texturaCharacter;
 //MODELOS
 struct Modelo {
     GLuint vao = 0;
+    GLuint vbo = 0;
     int nVertices = 0;
     GLuint textura = 0;
 };
-Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto, barracaVerde, charBarraca;
+Modelo parede, paredePorta, paredeJanela, telhado, barracaVerde, charBarraca;
 Modelo moinhoBase, moinhoMadeira, moinhoTelhado, moinhoPas, poste;
 Modelo cerca, portao, carrinho, planta, flores, barril, caixa, pedras, placa, cogumelos;
 
@@ -62,7 +60,7 @@ struct Transformacao {
     float escala;
 };
 
-struct Decoracao {
+struct InstanciaModelo {
     const Modelo *modelo;
     Transformacao transformacao;
 };
@@ -83,7 +81,7 @@ const Transformacao MOINHO = {
     glm::vec3(8.0f, 0.0f, -8.0f), 180.0f, 2.0f
 };
 
-const Decoracao DECORACOES[] = {
+const InstanciaModelo DECORACOES[] = {
     {&caixa,  {glm::vec3(-5.5f, 0.0f, -16.5f), 15.0f, 2.0f}},
     {&barril, {glm::vec3(-4.8f, 0.0f, -15.4f), 0.0f, 2.0f}},
     {&caixa,  {glm::vec3( 7.0f, 0.0f, -48.5f), 20.0f, 2.0f}},
@@ -102,7 +100,7 @@ const Transformacao FAZENDA = {
     glm::vec3(-10.0f, 0.0f, -40.0f), 90.0f, 2.0f
 };
 
-const Decoracao CHARACTERS[] = {
+const InstanciaModelo CHARACTERS[] = {
     // Comerciante da barraca
     {&charBarraca, {glm::vec3(4.7f, 0.0f, -50.0f), -90.0f, 2.0f}},
     // Senhor entrando na casa
@@ -113,9 +111,6 @@ const Decoracao CHARACTERS[] = {
     // Senhor andando pela rua
     {&charBarraca, {glm::vec3(0.0f, 0.0f, -30.0f), 180.0f, 2.0f}}
 };
-
-
-
 
 // variáveis para controlar funções
 bool moinhoLigado = true;
@@ -235,7 +230,6 @@ int WIDTH = 1000;
 int HEIGHT = 800; 
 int FB_WIDTH = 0;
 int FB_HEIGHT = 0;
-float ESCALA_RETINA = 1.0f;
 
 float Tempo_entre_frames = 0.0f; // variavel utilizada para movimentar a camera
 
@@ -253,7 +247,7 @@ double lastX = WIDTH / 2.0;
 double lastY = HEIGHT / 2.0;
 bool primeiro_mouse = true;
 
-int loadSimpleOBJ(string filePATH, int &nVertices)
+int loadSimpleOBJ(string filePATH, int &nVertices, GLuint &VBO)
 {
     // Vetores temporários para armazenar os dados lidos do arquivo
     std::vector<glm::vec3> vertices;
@@ -335,7 +329,7 @@ int loadSimpleOBJ(string filePATH, int &nVertices)
     arqEntrada.close();
 
     std::cout << "Gerando o buffer de geometria..." << std::endl;
-    GLuint VBO, VAO;
+    GLuint VAO;
 
     // Geração e Bind do VBO
     glGenBuffers(1, &VBO);
@@ -380,7 +374,7 @@ int loadSimpleOBJ(string filePATH, int &nVertices)
 // preenche a struct Modelo com os dados corretos
 Modelo carregaModelo(const string &obj, GLuint textura) {
     Modelo m;
-    m.vao = loadSimpleOBJ(obj, m.nVertices);
+    m.vao = loadSimpleOBJ(obj, m.nVertices, m.vbo);
     m.textura = textura;
     return m;
 }
@@ -464,7 +458,6 @@ GLuint carregaTextura(string filePATH)
 void atualizaTamanhoFramebuffer()
 {
     glfwGetFramebufferSize(Window, &FB_WIDTH, &FB_HEIGHT);
-    ESCALA_RETINA = (float)FB_WIDTH / (float)WIDTH;
 }
 
 void redimensionaCallback(GLFWwindow *window, int w, int h)
@@ -616,21 +609,19 @@ void inicializaObjetos()
     const string pasta = "../assets/Modelos3D/";
 
     texture1 = carregaTextura(pasta + "colormap.png");
-    Vao = loadSimpleOBJ(pasta + "block-grass-low-large.obj", NVertices);
+    Vao = loadSimpleOBJ(pasta + "block-grass-low-large.obj", NVertices, vboChao);
 
     texturaEstrada = carregaTextura(pasta + "colormap-fantasy.png");
     texturaCharacter = carregaTextura(pasta + "colormap-mini-characters.png");
-    VaoEstrada = loadSimpleOBJ(pasta + "road.obj", NVerticesEstrada);   
+    VaoEstrada = loadSimpleOBJ(pasta + "road.obj", NVerticesEstrada, vboEstrada);   
 
     texturaPinheiro = texture1;
-    VaoPinheiro = loadSimpleOBJ(pasta + "tree-pine.obj", NVerticesPinheiro);
+    VaoPinheiro = loadSimpleOBJ(pasta + "tree-pine.obj", NVerticesPinheiro, vboPinheiro);
 
     parede = carregaModelo(pasta + "wall.obj", texturaEstrada);
     paredePorta = carregaModelo(pasta + "wall-door.obj", texturaEstrada);
     paredeJanela = carregaModelo(pasta + "wall-window-small.obj", texturaEstrada);
-    paredeCanto = carregaModelo(pasta + "wall-corner.obj", texturaEstrada);
     telhado = carregaModelo(pasta + "roof.obj", texturaEstrada);
-    telhadoCanto = carregaModelo(pasta + "roof-corner.obj", texturaEstrada);
     barracaVerde = carregaModelo(pasta + "stall-green.obj", texturaEstrada);
     charBarraca = carregaModelo(pasta + "character-male-b.obj", texturaCharacter);
     moinhoBase = carregaModelo(pasta + "wall-block.obj", texturaEstrada);
@@ -964,7 +955,7 @@ void desenhaBarraca() {
 
 void desenhaCharacter()
 {
-    for (const Decoracao &personagem : CHARACTERS) {
+    for (const InstanciaModelo &personagem : CHARACTERS) {
         const Transformacao &t = personagem.transformacao;
         glm::mat4 matriz = glm::mat4(1.0f);
 
@@ -1141,7 +1132,7 @@ void desenhaLampada(glm::vec3 posicao, float raio) {
 // para cada decoração desenha a decoração na posição e rotação especificadas
 void desenhaDecoracoes()
 {
-    for (const Decoracao &d : DECORACOES) {
+    for (const InstanciaModelo &d : DECORACOES) {
         const Transformacao &t = d.transformacao;
         glm::mat4 matriz = glm::translate(glm::mat4(1.0f), t.posicao);
         matriz = glm::rotate(matriz, glm::radians(t.rotacaoY), glm::vec3(0, 1, 0));
@@ -1251,8 +1242,28 @@ void inicializaRenderizacao()
         glfwSwapBuffers(Window);
     }
 
-    glDeleteBuffers(1, &vboSol);
-    glDeleteVertexArrays(1, &vaoSol);
+    const Modelo *modelos[] = {
+        &parede, &paredePorta, &paredeJanela, &telhado, &barracaVerde,
+        &charBarraca, &moinhoBase, &moinhoMadeira, &moinhoTelhado, &moinhoPas,
+        &poste, &cerca, &portao, &carrinho, &planta, &flores, &barril,
+        &caixa, &pedras, &placa, &cogumelos
+    };
+    for (const Modelo *modelo : modelos) {
+        glDeleteBuffers(1, &modelo->vbo);
+        glDeleteVertexArrays(1, &modelo->vao);
+    }
+
+    const GLuint buffers[] = {vboSol, vboChao, vboEstrada, vboPinheiro};
+    const GLuint vaos[] = {vaoSol, Vao, VaoEstrada, VaoPinheiro};
+    // Os modelos e os pinheiros compartilham estas texturas: apagar cada uma uma vez.
+    const GLuint texturas[] = {texture1, texturaEstrada, texturaCharacter};
+    glDeleteBuffers(4, buffers);
+    glDeleteVertexArrays(4, vaos);
+    glDeleteTextures(3, texturas);
+    glDeleteProgram(Shader_programm);
+
+    glfwDestroyWindow(Window);
+    Window = nullptr;
     glfwTerminate();
 }
 
