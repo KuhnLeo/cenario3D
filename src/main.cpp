@@ -49,9 +49,12 @@ struct Modelo {
     int nVertices = 0;
     GLuint textura = 0;
 };
-Modelo parede, paredePorta, paredeJanela, telhado, barracaVerde, charBarraca;
+
+Modelo parede, paredePorta, paredeJanela, telhado, barracaVerde, barracaVermelha;
 Modelo moinhoBase, moinhoMadeira, moinhoTelhado, moinhoPas, poste;
-Modelo cerca, portao, carrinho, planta, flores, barril, caixa, pedras, placa, cogumelos;
+Modelo cerca, portao, carrinho, planta, flores, barril, caixa, pedras, placa, cogumelos,
+       mesa, banco, deck;
+Modelo femaleB, femaleC, femaleF, maleA, maleB, maleF;
 
 // para poder controlar posição e rotação dos objetos
 struct Transformacao {
@@ -65,6 +68,7 @@ struct InstanciaModelo {
     Transformacao transformacao;
 };
 
+// POSIÇÔES
 const Transformacao CASAS[] = {
     {glm::vec3(-8.0f, 0.0f, -20.0f),  90.0f, 2.0f},
     {glm::vec3( 8.0f, 0.0f, -34.0f), -90.0f, 2.0f},
@@ -73,8 +77,9 @@ const Transformacao CASAS[] = {
     {glm::vec3(-6.0f, 0.0f, -52.0f),  90.0f, 2.0f}
 };
 
-const Transformacao BARRACA = {
-    glm::vec3(3.5f, 0.0f, -50.0f), 0.0f, 2.0f
+const InstanciaModelo BARRACAS[] = {
+    {&barracaVerde,     {glm::vec3(10.0f, 0.0f, -52.0f), 90.0f, 2.0f}},
+    {&barracaVermelha,  {glm::vec3(8.0f, 0.0f, -44.0f), 90.0f, 2.0f}}
 };
 
 const Transformacao MOINHO = {
@@ -82,15 +87,22 @@ const Transformacao MOINHO = {
 };
 
 const InstanciaModelo DECORACOES[] = {
-    {&caixa,  {glm::vec3(-5.5f, 0.0f, -16.5f), 15.0f, 2.0f}},
-    {&barril, {glm::vec3(-4.8f, 0.0f, -15.4f), 0.0f, 2.0f}},
-    {&caixa,  {glm::vec3( 7.0f, 0.0f, -48.5f), 20.0f, 2.0f}},
-    {&barril, {glm::vec3( 7.2f, 0.0f, -51.5f), 0.0f, 2.0f}},
+    // Estoque atrás do comerciante da barraca verde
+    {&caixa,  {glm::vec3(9.2f, 0.0f, -55.0f), 15.0f, 2.0f}},
+    {&barril, {glm::vec3(11.2f, 0.0f, -55.0f), 0.0f, 2.0f}},
+    {&barril, {glm::vec3(11.2f, 0.0f, -56.0f), 0.0f, 2.0f}},
+    // Estoque atrás do comerciante da barraca vermelha
+    {&caixa,  {glm::vec3(7.2f, 0.0f, -41.0f), -15.0f, 2.0f}},
+    {&barril, {glm::vec3(9.2f, 0.0f, -41.0f), 0.0f, 2.0f}},
+    {&barril, {glm::vec3(9.2f, 0.0f, -40.0f), 0.0f, 2.0f}},
+   
+    {&placa,  {glm::vec3(2.0f, 0.0f, -42.8f), -90.0f, 2.0f}},
+
     {&pedras, {glm::vec3(-14.5f, 0.0f, -28.0f), 30.0f, 2.0f}},
     {&pedras, {glm::vec3(-12.5f, 0.0f, -14.0f), 30.0f, 2.0f}},
     {&pedras, {glm::vec3(10.5f, 0.0f, -6.0f), 30.0f, 2.0f}},
     {&pedras, {glm::vec3(4.5f, 0.0f, -10.0f), 30.0f, 2.0f}},
-    {&placa,  {glm::vec3(2.3f, 0.0f, -2.0f), -90.0f, 2.0f}},
+    {&placa,  {glm::vec3(2.3f, 0.0f, 0.0f), -90.0f, 2.0f}},
     {&cogumelos, {glm::vec3(-4.5f, 0.0f, -37.0f), 0.0f, 2.0f}},
     {&cogumelos, {glm::vec3(-10.0f, 0.0f, -23.5f), 0.0f, 2.0f}},
     {&carrinho, {glm::vec3(-7.0f, 0.0f, -32.2f), 90.0f, 2.0f}},
@@ -102,17 +114,18 @@ const Transformacao FAZENDA = {
 
 const InstanciaModelo CHARACTERS[] = {
     // Comerciante da barraca
-    {&charBarraca, {glm::vec3(4.7f, 0.0f, -50.0f), -90.0f, 2.0f}},
+    {&maleA, {glm::vec3(10.0f, 0.0f, -53.2f), 0.0f, 2.0f}},
+    {&maleF, {glm::vec3(8.0f, 0.0f, -42.8f), 180.0f, 2.0f}},
     // Senhor entrando na casa
-    {&charBarraca, {glm::vec3(-5.0f, 0.0f, -20.0f), 90.0f, 2.0f}},
+    {&femaleF, {glm::vec3(-5.0f, 0.0f, -20.0f), 90.0f, 2.0f}},
     // Senhor dentro da fazenda
-    {&charBarraca, {glm::vec3(-10.0f, 0.0f, -40.0f), 90.0f, 2.0f}},
-    {&charBarraca, {glm::vec3(-8.5f, 0.0f, -36.0f), 270.0f, 2.0f}},
+    {&maleB, {glm::vec3(-10.0f, 0.0f, -40.0f), 90.0f, 2.0f}},
+    {&femaleC, {glm::vec3(-8.5f, 0.0f, -36.0f), 270.0f, 2.0f}},
     // Senhor andando pela rua
-    {&charBarraca, {glm::vec3(0.0f, 0.0f, -30.0f), 180.0f, 2.0f}}
+    {&femaleB, {glm::vec3(0.0f, 0.0f, -30.0f), 180.0f, 2.0f}}
 };
 
-// variáveis para controlar funções
+// VARIÁVEIS PARA CONTROLE DE FUNÇÔES
 bool moinhoLigado = true;
 const float VELOCIDADE_PAS = 1.0f; // radianos por segundo
 float anguloPas = 0.0f;
@@ -120,9 +133,6 @@ bool teclaMAnterior = false;
 bool ehNoite = false;          
 bool teclaNAnterior = false;
 bool desenhandoMinimapa = false; // verdadeiro enquanto a cena é desenhada no minimapa
-
-
-
 
 // Postes: intercalados com os pinheiros, mais perto da estrada.
 const int POSTES_Z_INICIO = -54;
@@ -134,8 +144,6 @@ const float ALTURA_LAMPADA = 1.40f * ESCALA_POSTES;
 const float RAIO_LAMPADA = 0.2f;
 const float RAIO_MARCADOR_MINIMAPA = 0.6f; // raio do ponto que representa cada poste no minimapa
 
-
-
 // Sol: direção a partir da câmera, distância e raio.
 // Aponta para cima e à frente da câmera inicial.
 const glm::vec3 DIRECAO_PARA_SOL =
@@ -144,13 +152,35 @@ const glm::vec3 DIRECAO_PARA_SOL =
 const float DISTANCIA_SOL = 120.0f;
 const float RAIO_SOL = 6.0f;
 
-
-
 // Distribuição dos trechos da estrada e das fileiras de pinheiros.
 const int ESTRADA_Z_INICIO = -59;
 const int ESTRADA_Z_FIM = 0;
+
+// Estradas do comércio: paralelas em direção a +X.
+const int QUANTIDADE_ESTRADAS_COMERCIO = 3;
+const float ESTRADA_COMERCIO_Z = -46.0f;
+const float DISTANCIA_ENTRE_ESTRADAS_COMERCIO = 2.0f;
+const int ESTRADA_COMERCIO_X_FIM = 15;
+const float ESTRADA_COMERCIO_X_INICIO = 2.0f; // primeiro trecho após a estrada principal
 const glm::vec3 ESCALA_ESTRADA(2.0f, 1.0f, 2.0f);
 const float ESPACAMENTO_ESTRADA = 2.0f;
+
+// Fim efetivo da rua, considerando o espaçamento das peças.
+const float ULTIMO_TRECHO_COMERCIO_X = ESTRADA_COMERCIO_X_INICIO
+    + std::floor((ESTRADA_COMERCIO_X_FIM - ESTRADA_COMERCIO_X_INICIO)
+                 / ESPACAMENTO_ESTRADA) * ESPACAMENTO_ESTRADA;
+const float FIM_RUA_COMERCIO_X = ULTIMO_TRECHO_COMERCIO_X + ESPACAMENTO_ESTRADA / 2.0f;
+// Deck encostado no fim da rua; poste atrás dele.
+const float DECK_COMERCIO_X = FIM_RUA_COMERCIO_X;
+const float POSTE_COMERCIO_X = ESTRADA_COMERCIO_X_FIM + 1.5f;
+const float DECK_COMERCIO_Y = 0.0f;
+const float ESCALA_DECK_COMERCIO = 2.0f;
+const float ALTURA_DECK_COMERCIO = 0.06f * ESCALA_DECK_COMERCIO;
+const float LAZER_COMERCIO_X = FIM_RUA_COMERCIO_X - 2.0f;
+const float AFASTAMENTO_LAZER_COMERCIO = 2.0f;
+const float AFASTAMENTO_BANCOS_MESA = 1.2f;
+const float ESCALA_MOVEIS_COMERCIO = 2.0f;
+
 const int PINHEIROS_Z_INICIO = -59;
 const int PINHEIROS_Z_FIM = 0;
 const int PASSO_PINHEIROS = 10;
@@ -158,8 +188,6 @@ const float ESPACAMENTO_PINHEIROS_Z = 2.0f;
 const float AFASTAMENTO_PINHEIROS_X = 2.0f;
 const float ALTURA_PINHEIROS = 0.0f;
 const float ESCALA_PINHEIROS = 2.0f;
-
-
 
 // Grade do terreno: espaçamento horizontal e altura da base.
 const float ESPACAMENTO_TERRENO = 2.0f;
@@ -622,23 +650,38 @@ void inicializaObjetos()
     paredePorta = carregaModelo(pasta + "wall-door.obj", texturaEstrada);
     paredeJanela = carregaModelo(pasta + "wall-window-small.obj", texturaEstrada);
     telhado = carregaModelo(pasta + "roof.obj", texturaEstrada);
+    
     barracaVerde = carregaModelo(pasta + "stall-green.obj", texturaEstrada);
-    charBarraca = carregaModelo(pasta + "character-male-b.obj", texturaCharacter);
+    barracaVermelha = carregaModelo(pasta + "stall-red.obj", texturaEstrada);
+
+    maleA = carregaModelo(pasta + "character-male-a.obj", texturaCharacter);
+    maleB = carregaModelo(pasta + "character-male-b.obj", texturaCharacter);
+    maleF = carregaModelo(pasta + "character-male-f.obj", texturaCharacter);
+    femaleB = carregaModelo(pasta + "character-female-b.obj", texturaCharacter);
+    femaleC = carregaModelo(pasta + "character-female-c.obj", texturaCharacter);
+    femaleF = carregaModelo(pasta + "character-female-f.obj", texturaCharacter);
+
     moinhoBase = carregaModelo(pasta + "wall-block.obj", texturaEstrada);
     moinhoMadeira = carregaModelo(pasta + "wall-wood-block.obj", texturaEstrada);
     moinhoTelhado = carregaModelo(pasta + "roof-high-point.obj", texturaEstrada);
     moinhoPas = carregaModelo(pasta + "windmill.obj", texturaEstrada);
+    
     poste = carregaModelo(pasta + "lantern.obj", texturaEstrada);
+    
     cerca = carregaModelo(pasta + "fence.obj", texturaEstrada);
     portao = carregaModelo(pasta + "fence-gate.obj", texturaEstrada);
+    placa = carregaModelo(pasta + "sign.obj", texture1);
+
     carrinho = carregaModelo(pasta + "cart.obj", texturaEstrada);
     planta = carregaModelo(pasta + "plant.obj", texture1);
     flores = carregaModelo(pasta + "flowers.obj", texture1);
     barril = carregaModelo(pasta + "barrel.obj", texture1);
     caixa = carregaModelo(pasta + "crate.obj", texture1);
     pedras = carregaModelo(pasta + "rocks.obj", texture1);
-    placa = carregaModelo(pasta + "sign.obj", texture1);
     cogumelos = carregaModelo(pasta + "mushrooms.obj", texture1);
+    mesa = carregaModelo(pasta + "stall.obj", texturaEstrada);
+    banco = carregaModelo(pasta + "stall-bench.obj", texturaEstrada);
+    deck = carregaModelo(pasta + "planks-half.obj", texture1);
 
     inicializaSol();
     inicializaTerreno();
@@ -923,6 +966,20 @@ void desenhaEstrada() {
 
         glDrawArrays(GL_TRIANGLES, 0, NVerticesEstrada);
     }
+
+    for (int i = 0; i < QUANTIDADE_ESTRADAS_COMERCIO; i++) {
+        const float z = ESTRADA_COMERCIO_Z - i * DISTANCIA_ENTRE_ESTRADAS_COMERCIO;
+        for (float x = ESTRADA_COMERCIO_X_INICIO; x <= ESTRADA_COMERCIO_X_FIM; x += ESPACAMENTO_ESTRADA) {
+            glm::mat4 transformacao = glm::mat4(1.0f);
+            transformacao = glm::translate(transformacao, glm::vec3(x, 0.0f, z));
+            transformacao = glm::rotate(transformacao, glm::radians(90.0f), glm::vec3(0, 1, 0));
+            transformacao = glm::scale(transformacao, ESCALA_ESTRADA);
+            glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
+    
+            glDrawArrays(GL_TRIANGLES, 0, NVerticesEstrada);
+        }
+
+    }
 }
 
 void desenhaPinheiro() {
@@ -946,11 +1003,17 @@ void desenhaPinheiro() {
 }
 
 void desenhaBarraca() {
-    glm::mat4 modelo = glm::translate(glm::mat4(1.0f), BARRACA.posicao);
-    modelo = glm::rotate(modelo, glm::radians(BARRACA.rotacaoY), glm::vec3(0, 1, 0));
-    modelo = glm::scale(modelo, glm::vec3(BARRACA.escala));
+    for (const InstanciaModelo &barraca : BARRACAS) {
+        const Transformacao &t = barraca.transformacao;
 
-    desenhaModelo(barracaVerde, modelo);
+        glm::mat4 matriz = glm::translate(glm::mat4(1.0f), t.posicao);
+        matriz = glm::rotate(
+            matriz, glm::radians(t.rotacaoY), glm::vec3(0, 1, 0)
+        );
+        matriz = glm::scale(matriz, glm::vec3(t.escala));
+
+        desenhaModelo(*barraca.modelo, matriz);
+    }
 }
 
 void desenhaCharacter()
@@ -1142,21 +1205,79 @@ void desenhaDecoracoes()
 }
 
 void desenhaPostes(){
+    auto colocaPoste = [&](const glm::vec3 &posicao) {
+        glm::mat4 matriz = glm::translate(glm::mat4(1.0f), posicao);
+        matriz = glm::scale(matriz, glm::vec3(ESCALA_POSTES));
+        desenhaModelo(poste, matriz);
+
+        glm::vec3 posLampada = posicao + glm::vec3(0.0f, ALTURA_LAMPADA, 0.0f);
+        if (desenhandoMinimapa) {
+            desenhaLampada(posLampada, RAIO_MARCADOR_MINIMAPA);
+        } else if (ehNoite) {
+            desenhaLampada(posLampada, RAIO_LAMPADA);
+        }
+    };
+
     for (int z = POSTES_Z_INICIO; z <= POSTES_Z_FIM; z += PASSO_POSTES) {
         for (int lado = -1; lado <= 1; lado += 2) {
-            glm::mat4 matriz = glm::mat4(1.0f);
-            matriz = glm::translate(matriz, glm::vec3(lado * AFASTAMENTO_POSTES_X, 0.0f, z * 2.0f));
-            matriz =glm::scale(matriz, glm::vec3(ESCALA_POSTES));
+            colocaPoste(glm::vec3(lado * AFASTAMENTO_POSTES_X, 0.0f, z * 2.0f));
+        }
+    }
 
-            desenhaModelo(poste, matriz);  
+    // Poste atrás do deck, centralizado entre as faixas do comércio.
+    if (QUANTIDADE_ESTRADAS_COMERCIO > 0) {
+        const float centroZ = ESTRADA_COMERCIO_Z
+            - (QUANTIDADE_ESTRADAS_COMERCIO - 1) * DISTANCIA_ENTRE_ESTRADAS_COMERCIO / 2.0f;
+        colocaPoste(glm::vec3(POSTE_COMERCIO_X, 0.0f, centroZ));
+    }
+}
 
-            glm::vec3 posLampada(lado * AFASTAMENTO_POSTES_X, ALTURA_LAMPADA, z * 2.0f);
+void desenhaDecksComercio() {
+    if (QUANTIDADE_ESTRADAS_COMERCIO <= 0) return;
 
-            if (desenhandoMinimapa) {
-                desenhaLampada(posLampada, RAIO_MARCADOR_MINIMAPA); // marcador ampliado, sempre visível
-            } else if (ehNoite) {
-                desenhaLampada(posLampada, RAIO_LAMPADA);           // globo de luz normal
-            }
+    const float ultimoZ = ESTRADA_COMERCIO_Z
+        - (QUANTIDADE_ESTRADAS_COMERCIO - 1) * DISTANCIA_ENTRE_ESTRADAS_COMERCIO;
+    // Cada peça mede uma unidade em Z antes da escala.
+    const int quantidadeDecks = static_cast<int>(std::ceil(
+        (ESTRADA_COMERCIO_Z - ultimoZ + ESPACAMENTO_ESTRADA) / ESCALA_DECK_COMERCIO));
+    const float inicioZ = ESTRADA_COMERCIO_Z + ESPACAMENTO_ESTRADA / 2.0f
+        - ESCALA_DECK_COMERCIO / 2.0f;
+    for (int i = 0; i < quantidadeDecks; i++) {
+        const float z = inicioZ - i * ESCALA_DECK_COMERCIO;
+        glm::mat4 matriz = glm::translate(glm::mat4(1.0f),
+            glm::vec3(DECK_COMERCIO_X, DECK_COMERCIO_Y, z));
+        matriz = glm::scale(matriz, glm::vec3(ESCALA_DECK_COMERCIO));
+        desenhaModelo(deck, matriz);
+    }
+
+    const float bordaNorte = ESTRADA_COMERCIO_Z + ESPACAMENTO_ESTRADA / 2.0f;
+    const float bordaSul = inicioZ - (quantidadeDecks - 1) * ESCALA_DECK_COMERCIO
+        - ESCALA_DECK_COMERCIO / 2.0f;
+    auto coloca = [&](const Modelo &m, glm::vec3 posicao, float rotacao, float escala) {
+        glm::mat4 matriz = glm::translate(glm::mat4(1.0f), posicao);
+        matriz = glm::rotate(matriz, glm::radians(rotacao), glm::vec3(0, 1, 0));
+        matriz = glm::scale(matriz, glm::vec3(escala));
+        desenhaModelo(m, matriz);
+    };
+
+    // Banco central apoiado no deck, com o comprimento acompanhando Z.
+    coloca(banco, glm::vec3(
+        DECK_COMERCIO_X + 0.25f * ESCALA_DECK_COMERCIO,
+        DECK_COMERCIO_Y + ALTURA_DECK_COMERCIO,
+        (ESTRADA_COMERCIO_Z + ultimoZ) / 2.0f),
+        0.0f, ESCALA_MOVEIS_COMERCIO);
+
+    // Uma mesa em cada lateral da rua, com um banco de cada lado.
+    for (int lado = -1; lado <= 1; lado += 2) {
+        const float mesaZ = lado > 0
+            ? bordaNorte + AFASTAMENTO_LAZER_COMERCIO
+            : bordaSul - AFASTAMENTO_LAZER_COMERCIO;
+        coloca(mesa, glm::vec3(LAZER_COMERCIO_X, 0.0f, mesaZ),
+            90.0f, ESCALA_MOVEIS_COMERCIO);
+        for (int bancoLado = -1; bancoLado <= 1; bancoLado += 2) {
+            coloca(banco, glm::vec3(LAZER_COMERCIO_X, 0.0f,
+                mesaZ + bancoLado * AFASTAMENTO_BANCOS_MESA),
+                bancoLado > 0 ? 90.0f : -90.0f, ESCALA_MOVEIS_COMERCIO);
         }
     }
 }
@@ -1174,6 +1295,7 @@ void desenhaVila()
     desenhaFazenda();
     desenhaPostes();
     desenhaDecoracoes();
+    desenhaDecksComercio();
 }
 
 void inicializaRenderizacao()
@@ -1243,10 +1365,12 @@ void inicializaRenderizacao()
     }
 
     const Modelo *modelos[] = {
-        &parede, &paredePorta, &paredeJanela, &telhado, &barracaVerde,
-        &charBarraca, &moinhoBase, &moinhoMadeira, &moinhoTelhado, &moinhoPas,
+        &parede, &paredePorta, &paredeJanela, &telhado, 
+        &barracaVerde, &barracaVermelha,
+        &maleA, &maleB, &maleF, &femaleB, &femaleC, &femaleF, 
+        &moinhoBase, &moinhoMadeira, &moinhoTelhado, &moinhoPas,
         &poste, &cerca, &portao, &carrinho, &planta, &flores, &barril,
-        &caixa, &pedras, &placa, &cogumelos
+        &caixa, &pedras, &placa, &cogumelos, &mesa, &banco, &deck
     };
     for (const Modelo *modelo : modelos) {
         glDeleteBuffers(1, &modelo->vbo);
