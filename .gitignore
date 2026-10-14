@@ -1,0 +1,37 @@
+# Build
+build/
+out/
+cmake-build-*/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Binários
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# IDEs
+.vscode/
+.idea/
+*.xcodeproj/
+*.xcworkspace/
+
+# Assets grandes (opcional, descomenta se quiser)
+# assets/Modelos3D/*.obj
+# assets/Modelos3D/*.png
