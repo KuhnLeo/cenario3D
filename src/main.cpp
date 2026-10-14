@@ -55,6 +55,7 @@ Modelo moinhoBase, moinhoMadeira, moinhoTelhado, moinhoPas, poste;
 Modelo cerca, portao, carrinho, planta, flores, barril, caixa, pedras, placa, cogumelos,
        mesa, banco, deck;
 Modelo femaleB, femaleC, femaleF, maleA, maleB, maleF;
+Modelo dog;
 
 // para poder controlar posição e rotação dos objetos
 struct Transformacao {
@@ -112,17 +113,19 @@ const Transformacao FAZENDA = {
     glm::vec3(-10.0f, 0.0f, -40.0f), 90.0f, 2.0f
 };
 
-const InstanciaModelo CHARACTERS[] = {
+InstanciaModelo CHARACTERS[] = {
     // Comerciante da barraca
     {&maleA, {glm::vec3(10.0f, 0.0f, -53.2f), 0.0f, 2.0f}},
     {&maleF, {glm::vec3(8.0f, 0.0f, -42.8f), 180.0f, 2.0f}},
-    // Senhor entrando na casa
+    // Saindo da casa
     {&femaleF, {glm::vec3(-5.0f, 0.0f, -20.0f), 90.0f, 2.0f}},
-    // Senhor dentro da fazenda
+    //  Dentro da fazenda
     {&maleB, {glm::vec3(-10.0f, 0.0f, -40.0f), 90.0f, 2.0f}},
     {&femaleC, {glm::vec3(-8.5f, 0.0f, -36.0f), 270.0f, 2.0f}},
-    // Senhor andando pela rua
-    {&femaleB, {glm::vec3(0.0f, 0.0f, -30.0f), 180.0f, 2.0f}}
+    // Menina no centro do passeio do cachorro.
+    {&femaleB, {glm::vec3(5.0f, 0.0f, -48.0f), 90.0f, 2.0f}},
+    // A posição do cachorro é atualizada pelo passeio circular.
+    {&dog, {glm::vec3(1.5f, 0.0f, -30.0f), 180.0f, 0.5f}}
 };
 
 // VARIÁVEIS PARA CONTROLE DE FUNÇÔES
@@ -676,6 +679,7 @@ void inicializaObjetos()
     mesa = carregaModelo(pasta + "stall.obj", texturaEstrada);
     banco = carregaModelo(pasta + "stall-bench.obj", texturaEstrada);
     deck = carregaModelo(pasta + "planks-half.obj", texture1);
+    dog = carregaModelo(pasta + "animal-dog.obj", texture1);
 
     inicializaSol();
     inicializaTerreno();
@@ -1009,6 +1013,29 @@ void desenhaBarraca() {
     }
 }
 
+void atualizaCachorro(float deltaTempo)
+{
+    const float raio = 2.0f;
+    const float periodo = 5.0f; // Segundos para completar uma volta.
+    const float volta = 2.0f * glm::pi<float>();
+    static float angulo = 0.0f;
+    angulo = std::fmod(angulo + (volta / periodo) * deltaTempo, volta);
+
+    const Transformacao *menina = nullptr;
+    InstanciaModelo *cachorro = nullptr;
+    for (InstanciaModelo &personagem : CHARACTERS) {
+        if (personagem.modelo == &femaleB) menina = &personagem.transformacao;
+        if (personagem.modelo == &dog) cachorro = &personagem;
+    }
+    if (!menina || !cachorro) return;
+
+    cachorro->transformacao.posicao = menina->posicao
+        + glm::vec3(raio * std::cos(angulo), 0.0f, raio * std::sin(angulo));
+    // O modelo olha para +Z; a tangente aponta na direção da corrida.
+    cachorro->transformacao.rotacaoY = glm::degrees(
+        std::atan2(-std::sin(angulo), std::cos(angulo)));
+}
+
 void desenhaCharacter()
 {
     for (const InstanciaModelo &personagem : CHARACTERS) {
@@ -1321,6 +1348,7 @@ void inicializaRenderizacao()
         glUseProgram(Shader_programm);
 
         trataTeclado();
+        atualizaCachorro(Tempo_entre_frames);
         aplicaIluminacao();
         atualizaLuzesPostes();
 
@@ -1368,7 +1396,7 @@ void inicializaRenderizacao()
         &maleA, &maleB, &maleF, &femaleB, &femaleC, &femaleF, 
         &moinhoBase, &moinhoMadeira, &moinhoTelhado, &moinhoPas,
         &poste, &cerca, &portao, &carrinho, &planta, &flores, &barril,
-        &caixa, &pedras, &placa, &cogumelos, &mesa, &banco, &deck
+        &caixa, &pedras, &placa, &cogumelos, &mesa, &banco, &deck, &dog
     };
     for (const Modelo *modelo : modelos) {
         glDeleteBuffers(1, &modelo->vbo);
