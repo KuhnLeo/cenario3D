@@ -55,7 +55,7 @@ Modelo moinhoBase, moinhoMadeira, moinhoTelhado, moinhoPas, poste;
 Modelo cerca, portao, carrinho, planta, flores, barril, caixa, pedras, placa, cogumelos,
        mesa, banco, deck;
 Modelo femaleB, femaleC, femaleF, maleA, maleB, maleF;
-Modelo dog;
+Modelo dog, blocoMorro;
 
 // para poder controlar posição e rotação dos objetos
 struct Transformacao {
@@ -67,6 +67,13 @@ struct Transformacao {
 struct InstanciaModelo {
     const Modelo *modelo;
     Transformacao transformacao;
+};
+
+struct Morro {
+    float x, z;
+    int largura;
+    int profundidade;
+    int niveis;
 };
 
 // POSIÇÔES
@@ -107,6 +114,64 @@ const InstanciaModelo DECORACOES[] = {
     {&cogumelos, {glm::vec3(-4.5f, 0.0f, -37.0f), 0.0f, 2.0f}},
     {&cogumelos, {glm::vec3(-10.0f, 0.0f, -23.5f), 0.0f, 2.0f}},
     {&carrinho, {glm::vec3(-7.0f, 0.0f, -32.2f), 90.0f, 2.0f}},
+
+    {&barril, {glm::vec3(-11.5f, 0.0f, -18.5f), 0.0f, 2.0f}},
+    {&barril, {glm::vec3(-11.5f, 0.0f, -21.2f), 0.0f, 2.0f}},
+    {&caixa,  {glm::vec3(-12.3f, 0.0f, -19.8f), 20.0f, 2.0f}},
+    {&caixa,  {glm::vec3(-11.5f, 0.0f, -3.0f), -15.0f, 2.0f}},
+    {&barril, {glm::vec3(-11.7f, 0.0f, -5.4f), 0.0f, 2.0f}},
+    {&barril, {glm::vec3( 11.5f, 0.0f, -33.0f), 0.0f, 2.0f}},
+    {&caixa,  {glm::vec3( 11.7f, 0.0f, -35.5f), 25.0f, 2.0f}},
+    {&caixa,  {glm::vec3( 11.5f, 0.0f, -63.0f), 10.0f, 2.0f}},
+    {&barril, {glm::vec3( 11.7f, 0.0f, -65.5f), 0.0f, 2.0f}},
+    {&caixa,  {glm::vec3(-9.5f, 0.0f, -51.0f), -20.0f, 2.0f}},
+    {&barril, {glm::vec3(-9.5f, 0.0f, -53.5f), 0.0f, 2.0f}},
+
+    {&pedras, {glm::vec3(-18.0f, 0.0f, -10.0f), 10.0f, 2.0f}},
+    {&pedras, {glm::vec3(-22.0f, 0.0f, -36.0f), 80.0f, 2.0f}},
+    {&pedras, {glm::vec3(-17.0f, 0.0f, -58.0f), 150.0f, 2.0f}},
+    {&pedras, {glm::vec3(-20.0f, 0.0f, -80.0f), 45.0f, 2.0f}},
+    {&pedras, {glm::vec3(-38.0f, 0.0f, -45.0f), 200.0f, 2.0f}},
+    {&pedras, {glm::vec3(-45.0f, 0.0f, -30.0f), 120.0f, 2.0f}},
+    {&pedras, {glm::vec3(-44.0f, 0.0f, -85.0f), 60.0f, 2.0f}},
+    {&pedras, {glm::vec3(16.0f, 0.0f, -14.0f), 100.0f, 2.0f}},
+    {&pedras, {glm::vec3(22.0f, 0.0f, -30.0f), 170.0f, 2.0f}},
+    {&pedras, {glm::vec3(20.0f, 0.0f, -60.0f), 20.0f, 2.0f}},
+    {&pedras, {glm::vec3(18.0f, 0.0f, -70.0f), 90.0f, 2.0f}},
+    {&pedras, {glm::vec3(38.0f, 0.0f, -50.0f), 140.0f, 2.0f}},
+    {&pedras, {glm::vec3(44.0f, 0.0f, -35.0f), 70.0f, 2.0f}},
+    {&pedras, {glm::vec3(42.0f, 0.0f, -95.0f), 30.0f, 2.0f}},
+
+    {&cogumelos, {glm::vec3(-13.0f, 0.0f, -33.0f), 0.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(-16.0f, 0.0f, -48.0f), 90.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(12.0f, 0.0f, -12.0f), 0.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(18.0f, 0.0f, -40.0f), 45.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(-20.0f, 0.0f, -20.0f), 0.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(-18.0f, 0.0f, -70.0f), 120.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(22.0f, 0.0f, -55.0f), 0.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(14.0f, 0.0f, -75.0f), 60.0f, 2.0f}},
+
+    {&pedras,    {glm::vec3(-30.0f, 1.5f, -24.0f), 20.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(-34.0f, 1.0f, -24.0f), 0.0f, 2.0f}},
+    {&flores,    {glm::vec3(-26.0f, 1.0f, -24.0f), 0.0f, 2.0f}},
+    {&flores,    {glm::vec3(-36.0f, 0.5f, -22.0f), 0.0f, 2.0f}},
+    {&pedras,    {glm::vec3(30.0f, 1.0f, -22.0f), -15.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(26.0f, 0.5f, -22.0f), 0.0f, 2.0f}},
+    {&flores,    {glm::vec3(34.0f, 0.5f, -20.0f), 0.0f, 2.0f}},
+    {&pedras,    {glm::vec3(-32.0f, 1.5f, -64.0f), 40.0f, 2.0f}},
+    {&pedras,    {glm::vec3(-35.0f, 1.5f, -63.0f), 110.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(-38.0f, 1.0f, -64.0f), 0.0f, 2.0f}},
+    {&flores,    {glm::vec3(-26.0f, 1.0f, -64.0f), 0.0f, 2.0f}},
+    {&flores,    {glm::vec3(-40.0f, 0.5f, -60.0f), 0.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(-23.0f, 1.0f, -68.0f), 0.0f, 2.0f}},
+    {&pedras,    {glm::vec3(-22.0f, 1.0f, -70.0f), 75.0f, 2.0f}},
+    {&pedras,    {glm::vec3(28.0f, 1.5f, -80.0f), 70.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(24.0f, 1.0f, -80.0f), 0.0f, 2.0f}},
+    {&flores,    {glm::vec3(22.0f, 0.5f, -76.0f), 0.0f, 2.0f}},
+    {&pedras,    {glm::vec3(-24.0f, 1.0f, -96.0f), 0.0f, 2.0f}},
+    {&flores,    {glm::vec3(-28.0f, 0.5f, -96.0f), 0.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(-20.0f, 0.5f, -94.0f), 0.0f, 2.0f}},
+    
 };
 
 const Transformacao FAZENDA = {
@@ -126,6 +191,17 @@ InstanciaModelo CHARACTERS[] = {
     {&femaleB, {glm::vec3(5.0f, 0.0f, -48.0f), 90.0f, 2.0f}},
     // A posição do cachorro é atualizada pelo passeio circular.
     {&dog, {glm::vec3(1.5f, 0.0f, -30.0f), 180.0f, 0.5f}}
+};
+
+const float ALTURA_NIVEL_MORRO = 0.5f;
+
+const Morro MORROS[] = {
+    {-30.0f, -24.0f, 7, 5, 3},
+    { 30.0f, -22.0f, 5, 5, 2},
+    {-32.0f, -64.0f, 9, 7, 3},
+    {-24.0f, -68.0f, 5, 5, 2},
+    { 28.0f, -80.0f, 7, 7, 3},
+    {-24.0f, -96.0f, 5, 5, 2},
 };
 
 // VARIÁVEIS PARA CONTROLE DE FUNÇÔES
@@ -186,69 +262,11 @@ const float AFASTAMENTO_PINHEIROS_X = 2.0f;
 const float ALTURA_PINHEIROS = 0.0f;
 const float ESCALA_PINHEIROS = 2.0f;
 
-// Grade do terreno: espaçamento horizontal e altura da base.
+// Grade do terreno
 const float ESPACAMENTO_TERRENO = 2.0f;
 const float ALTURA_BASE_TERRENO = -0.5f;
-
-//TERRENO: limites, colinas e áreas planas da vila.
-const float PASSO_TERRENO = 0.5f;
 const int TERRENO_X_MIN = -25, TERRENO_X_MAX = 25;
 const int Z_FIM = -59;
-struct Colina {float x, z, raio, altura;};
-
-const Colina COLINAS[] = {
-    {-34.0f, -26.0f, 16.0f, 3.5f},
-    { 32.0f, -52.0f, 18.0f, 4.0f},
-    {-30.0f, -82.0f, 20.0f, 5.0f},
-    { 28.0f, -98.0f, 14.0f, 3.0f},
-    {-42.0f, -52.0f, 10.0f, 2.0f},
-    { 20.0f, -14.0f,  8.0f, 1.5f},
-    {-18.0f, -62.0f,  7.0f, 1.5f},
-    { 40.0f, -22.0f,  9.0f, 2.0f},
-};
-
-struct ZonaPlana { float x, z, raio; };
-
-const ZonaPlana ZONAS_PLANAS[] = {
-    {-8.0f, -20.0f, 9.0f},
-    { 8.0f, -34.0f, 9.0f},
-    {-8.0f, -48.0f, 9.0f},
-    { 8.0f, -64.0f, 9.0f},
-    {-14.0f, -6.0f, 10.0f},
-};
-
-std::vector<int> niveisTerreno;
-
-float alturaTerreno(float x, float z) {
-    if (std::fabs(x) < 4.0f) return 0.0f;
-    for (const ZonaPlana &zp : ZONAS_PLANAS)
-        if (std::hypot(x - zp.x, z - zp.z) < zp.raio) return 0.0f;
-
-    float h = 0.0f;
-    for (const Colina &c : COLINAS) {
-        float d = std::hypot(x - c.x, z - c.z);
-        if (d < c.raio)
-            h = std::max(h, c.altura * 0.5f * (1.0f + std::cos(3.14159265f * d / c.raio)));
-    }
-    return h;
-}
-int indiceTerreno(int bx, int bz) {
-    return (bz - Z_FIM) * (TERRENO_X_MAX - TERRENO_X_MIN + 1) + (bx - TERRENO_X_MIN);
-}
-void inicializaTerreno() {
-    int largura = TERRENO_X_MAX - TERRENO_X_MIN + 1;
-    int profund = -Z_FIM + 1;
-    niveisTerreno.assign(largura * profund, 0);
-    for (int bz = Z_FIM; bz <= 0; bz++)
-        for (int bx = TERRENO_X_MIN; bx <= TERRENO_X_MAX; bx++)
-            niveisTerreno[indiceTerreno(bx, bz)] =
-                (int)std::lround(alturaTerreno(bx * ESPACAMENTO_TERRENO, bz * ESPACAMENTO_TERRENO) / PASSO_TERRENO);
-}
-int nivelTerreno(int bx, int bz, int padrao) {
-    if (bx < TERRENO_X_MIN || bx > TERRENO_X_MAX || bz < Z_FIM || bz > 0) return padrao;
-    return niveisTerreno[indiceTerreno(bx, bz)];
-}
-
 
 // VARIÁVEIS PADRÃO DOS PROGRAMAS
 int WIDTH = 1000;
@@ -523,10 +541,8 @@ void mouse_callback(GLFWwindow *window, double xpos, double ypos)
         Cam_pitch = -89.0f;
 }
 
-void inicializaOpenGL()
-{
-    if (!glfwInit())
-    {
+void inicializaOpenGL() {
+    if (!glfwInit()){
         std::cerr << "Falha ao inicializar o GLFW" << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -638,7 +654,8 @@ void inicializaObjetos()
 
     texturaEstrada = carregaTextura(pasta + "colormap-fantasy.png");
     texturaCharacter = carregaTextura(pasta + "colormap-mini-characters.png");
-    VaoEstrada = loadSimpleOBJ(pasta + "road.obj", NVerticesEstrada, vboEstrada);   
+    VaoEstrada = loadSimpleOBJ(pasta + "road.obj", NVerticesEstrada, vboEstrada);
+    blocoMorro = carregaModelo(pasta + "block-grass-low-large.obj", texture1);
 
     texturaPinheiro = texture1;
     VaoPinheiro = loadSimpleOBJ(pasta + "tree-pine.obj", NVerticesPinheiro, vboPinheiro);
@@ -682,7 +699,6 @@ void inicializaObjetos()
     dog = carregaModelo(pasta + "animal-dog.obj", texture1);
 
     inicializaSol();
-    inicializaTerreno();
 }
 
 void inicializaShaders()
@@ -930,24 +946,35 @@ void desenhaChao() {
     glBindTexture(GL_TEXTURE_2D, texture1);
     glBindVertexArray(Vao);
 
-    auto bloco = [&](int x, int z, float y) {
-        glm::mat4 t = glm::translate(glm::mat4(1.0f), glm::vec3(x * ESPACAMENTO_TERRENO, y, z * ESPACAMENTO_TERRENO));
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(t));
-        glDrawArrays(GL_TRIANGLES, 0, NVertices);
-    };
-
     for (int x = TERRENO_X_MIN; x <= TERRENO_X_MAX; x++) {
         for (int z = Z_FIM; z <= 0; z++) {
-            int n = nivelTerreno(x, z, 0);
-            int viz = std::min(std::min(nivelTerreno(x + 1, z, n), nivelTerreno(x - 1, z, n)),
-                               std::min(nivelTerreno(x, z + 1, n), nivelTerreno(x, z - 1, n)));
-
-            bloco(x, z, ALTURA_BASE_TERRENO + n * PASSO_TERRENO);                 // bloco do topo
-            for (int k = n - 1; k > viz; k--)                        // preenche vãos nas encostas
-                bloco(x, z, ALTURA_BASE_TERRENO + k * PASSO_TERRENO);
+            glm::mat4 t = glm::translate(glm::mat4(1.0f),
+                glm::vec3(x * ESPACAMENTO_TERRENO, ALTURA_BASE_TERRENO, z * ESPACAMENTO_TERRENO));
+            glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(t));
+            glDrawArrays(GL_TRIANGLES, 0, NVertices);
         }
     }
-}  
+}
+
+void desenhaMorros()
+{
+    for (const Morro &m : MORROS) {
+        for (int nivel = 0; nivel < m.niveis; nivel++) {
+            int meiaL = (m.largura - 1) / 2 - nivel;
+            int meiaP = (m.profundidade - 1) / 2 - nivel;
+            if (meiaL < 0 || meiaP < 0) break;
+
+            float y = ALTURA_BASE_TERRENO + (nivel + 1) * ALTURA_NIVEL_MORRO;
+
+            for (int i = -meiaL; i <= meiaL; i++) {
+                for (int j = -meiaP; j <= meiaP; j++) {
+                    glm::vec3 pos(m.x + i * ESPACAMENTO_TERRENO, y, m.z + j * ESPACAMENTO_TERRENO);
+                    desenhaModelo(blocoMorro, glm::translate(glm::mat4(1.0f), pos));
+                }
+            }
+        }
+    }
+}
 
 void desenhaEstrada() {
     GLint transformLoc = glGetUniformLocation(Shader_programm, "matriz");
@@ -1310,6 +1337,7 @@ void desenhaDecksComercio() {
 void desenhaVila()
 {
     desenhaChao();
+    desenhaMorros();
     desenhaEstrada();
     desenhaPinheiro();
     desenhaBarraca();
