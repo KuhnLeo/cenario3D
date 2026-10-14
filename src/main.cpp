@@ -171,14 +171,8 @@ const float ULTIMO_TRECHO_COMERCIO_X = ESTRADA_COMERCIO_X_INICIO
                  / ESPACAMENTO_ESTRADA) * ESPACAMENTO_ESTRADA;
 const float FIM_RUA_COMERCIO_X = ULTIMO_TRECHO_COMERCIO_X + ESPACAMENTO_ESTRADA / 2.0f;
 // Deck encostado no fim da rua; poste atrás dele.
-const float DECK_COMERCIO_X = FIM_RUA_COMERCIO_X;
 const float POSTE_COMERCIO_X = ESTRADA_COMERCIO_X_FIM + 1.5f;
-const float DECK_COMERCIO_Y = 0.0f;
 const float ESCALA_DECK_COMERCIO = 2.0f;
-const float ALTURA_DECK_COMERCIO = 0.06f * ESCALA_DECK_COMERCIO;
-const float LAZER_COMERCIO_X = FIM_RUA_COMERCIO_X - 2.0f;
-const float AFASTAMENTO_LAZER_COMERCIO = 2.0f;
-const float AFASTAMENTO_BANCOS_MESA = 1.2f;
 const float ESCALA_MOVEIS_COMERCIO = 2.0f;
 
 const int PINHEIROS_Z_INICIO = -59;
@@ -978,7 +972,6 @@ void desenhaEstrada() {
     
             glDrawArrays(GL_TRIANGLES, 0, NVerticesEstrada);
         }
-
     }
 }
 
@@ -1204,6 +1197,37 @@ void desenhaDecoracoes()
     }
 }
 
+std::vector<glm::vec3> posicoesPostes() {
+    std::vector<glm::vec3> posicoes;
+    for (int z = POSTES_Z_INICIO; z <= POSTES_Z_FIM; z += PASSO_POSTES) {
+        for (int lado = -1; lado <= 1; lado += 2) {
+            posicoes.emplace_back(lado * AFASTAMENTO_POSTES_X, 0.0f, z * 2.0f);
+        }
+    }
+    if (QUANTIDADE_ESTRADAS_COMERCIO > 0) {
+        const float centroZ = ESTRADA_COMERCIO_Z
+            - (QUANTIDADE_ESTRADAS_COMERCIO - 1) * DISTANCIA_ENTRE_ESTRADAS_COMERCIO / 2.0f;
+        posicoes.emplace_back(POSTE_COMERCIO_X, 0.0f, centroZ);
+    }
+    return posicoes;
+}
+
+void atualizaLuzesPostes() {
+    // Mesmo limite declarado no fragment shader.
+    const int MAX_LUZES = 64;
+    const auto posicoes = posicoesPostes();
+    const int quantidade = static_cast<int>(posicoes.size()) < MAX_LUZES
+        ? static_cast<int>(posicoes.size()) : MAX_LUZES;
+    for (int i = 0; i < quantidade; i++) {
+        const glm::vec3 lampada = posicoes[i] + glm::vec3(0.0f, ALTURA_LAMPADA, 0.0f);
+        const std::string nome = "posicoesLuzes[" + std::to_string(i) + "]";
+        glUniform3fv(glGetUniformLocation(Shader_programm, nome.c_str()),
+                     1, glm::value_ptr(lampada));
+    }
+    glUniform1i(glGetUniformLocation(Shader_programm, "quantidadeLuzes"), quantidade);
+    glUniform1i(glGetUniformLocation(Shader_programm, "luzesPostesAtivas"), ehNoite);
+}
+
 void desenhaPostes(){
     auto colocaPoste = [&](const glm::vec3 &posicao) {
         glm::mat4 matriz = glm::translate(glm::mat4(1.0f), posicao);
@@ -1218,41 +1242,19 @@ void desenhaPostes(){
         }
     };
 
-    for (int z = POSTES_Z_INICIO; z <= POSTES_Z_FIM; z += PASSO_POSTES) {
-        for (int lado = -1; lado <= 1; lado += 2) {
-            colocaPoste(glm::vec3(lado * AFASTAMENTO_POSTES_X, 0.0f, z * 2.0f));
-        }
-    }
-
-    // Poste atrás do deck, centralizado entre as faixas do comércio.
-    if (QUANTIDADE_ESTRADAS_COMERCIO > 0) {
-        const float centroZ = ESTRADA_COMERCIO_Z
-            - (QUANTIDADE_ESTRADAS_COMERCIO - 1) * DISTANCIA_ENTRE_ESTRADAS_COMERCIO / 2.0f;
-        colocaPoste(glm::vec3(POSTE_COMERCIO_X, 0.0f, centroZ));
+    for (const glm::vec3 &posicao : posicoesPostes()) {
+        colocaPoste(posicao);
     }
 }
 
 void desenhaDecksComercio() {
-    if (QUANTIDADE_ESTRADAS_COMERCIO <= 0) return;
+    // Posições manuais em coordenadas de mundo (X, Y, Z).
+    const glm::vec3 posicoesDecks[] = {
+        {15.0f, 0.0f, -46.0f},
+        {15.0f, 0.0f, -48.0f},
+        {15.0f, 0.0f, -50.0f}
+    };
 
-    const float ultimoZ = ESTRADA_COMERCIO_Z
-        - (QUANTIDADE_ESTRADAS_COMERCIO - 1) * DISTANCIA_ENTRE_ESTRADAS_COMERCIO;
-    // Cada peça mede uma unidade em Z antes da escala.
-    const int quantidadeDecks = static_cast<int>(std::ceil(
-        (ESTRADA_COMERCIO_Z - ultimoZ + ESPACAMENTO_ESTRADA) / ESCALA_DECK_COMERCIO));
-    const float inicioZ = ESTRADA_COMERCIO_Z + ESPACAMENTO_ESTRADA / 2.0f
-        - ESCALA_DECK_COMERCIO / 2.0f;
-    for (int i = 0; i < quantidadeDecks; i++) {
-        const float z = inicioZ - i * ESCALA_DECK_COMERCIO;
-        glm::mat4 matriz = glm::translate(glm::mat4(1.0f),
-            glm::vec3(DECK_COMERCIO_X, DECK_COMERCIO_Y, z));
-        matriz = glm::scale(matriz, glm::vec3(ESCALA_DECK_COMERCIO));
-        desenhaModelo(deck, matriz);
-    }
-
-    const float bordaNorte = ESTRADA_COMERCIO_Z + ESPACAMENTO_ESTRADA / 2.0f;
-    const float bordaSul = inicioZ - (quantidadeDecks - 1) * ESCALA_DECK_COMERCIO
-        - ESCALA_DECK_COMERCIO / 2.0f;
     auto coloca = [&](const Modelo &m, glm::vec3 posicao, float rotacao, float escala) {
         glm::mat4 matriz = glm::translate(glm::mat4(1.0f), posicao);
         matriz = glm::rotate(matriz, glm::radians(rotacao), glm::vec3(0, 1, 0));
@@ -1260,26 +1262,21 @@ void desenhaDecksComercio() {
         desenhaModelo(m, matriz);
     };
 
-    // Banco central apoiado no deck, com o comprimento acompanhando Z.
-    coloca(banco, glm::vec3(
-        DECK_COMERCIO_X + 0.25f * ESCALA_DECK_COMERCIO,
-        DECK_COMERCIO_Y + ALTURA_DECK_COMERCIO,
-        (ESTRADA_COMERCIO_Z + ultimoZ) / 2.0f),
-        0.0f, ESCALA_MOVEIS_COMERCIO);
-
-    // Uma mesa em cada lateral da rua, com um banco de cada lado.
-    for (int lado = -1; lado <= 1; lado += 2) {
-        const float mesaZ = lado > 0
-            ? bordaNorte + AFASTAMENTO_LAZER_COMERCIO
-            : bordaSul - AFASTAMENTO_LAZER_COMERCIO;
-        coloca(mesa, glm::vec3(LAZER_COMERCIO_X, 0.0f, mesaZ),
-            90.0f, ESCALA_MOVEIS_COMERCIO);
-        for (int bancoLado = -1; bancoLado <= 1; bancoLado += 2) {
-            coloca(banco, glm::vec3(LAZER_COMERCIO_X, 0.0f,
-                mesaZ + bancoLado * AFASTAMENTO_BANCOS_MESA),
-                bancoLado > 0 ? 90.0f : -90.0f, ESCALA_MOVEIS_COMERCIO);
-        }
+    for (const glm::vec3 &posicao : posicoesDecks) {
+        coloca(deck, posicao, 0.0f, ESCALA_DECK_COMERCIO);
     }
+
+    // Banco central apoiado no deck.
+    coloca(banco, glm::vec3(15.5f, 0.12f, -48.0f), 0.0f, ESCALA_MOVEIS_COMERCIO);
+
+    // Mesas e bancos nas duas laterais.
+    coloca(mesa, glm::vec3(13.0f, 0.0f, -43.0f), 90.0f, ESCALA_MOVEIS_COMERCIO);
+    coloca(banco, glm::vec3(13.0f, 0.0f, -44.2f), -90.0f, ESCALA_MOVEIS_COMERCIO);
+    coloca(banco, glm::vec3(13.0f, 0.0f, -41.8f), 90.0f, ESCALA_MOVEIS_COMERCIO);
+
+    coloca(mesa, glm::vec3(13.0f, 0.0f, -53.0f), 90.0f, ESCALA_MOVEIS_COMERCIO);
+    coloca(banco, glm::vec3(13.0f, 0.0f, -54.2f), -90.0f, ESCALA_MOVEIS_COMERCIO);
+    coloca(banco, glm::vec3(13.0f, 0.0f, -51.8f), 90.0f, ESCALA_MOVEIS_COMERCIO);
 }
 
 // A mesma composição é usada na câmera principal e no minimapa.
@@ -1322,9 +1319,10 @@ void inicializaRenderizacao()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(Shader_programm);
-        aplicaIluminacao();
 
         trataTeclado();
+        aplicaIluminacao();
+        atualizaLuzesPostes();
 
         glActiveTexture(GL_TEXTURE0);
 
