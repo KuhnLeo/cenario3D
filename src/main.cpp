@@ -11,7 +11,6 @@
 #include <vector>
 #include <string>
 #include <cmath>
-#include <climits>
 using namespace std;
 
 GLFWwindow *Window = nullptr;
@@ -24,23 +23,21 @@ int nVerticesSol = 0;
 
 //CHÃO
 GLuint Vao = 0;
+GLuint vboChao = 0;
 int NVertices;
 unsigned int texture1;
 
 //ESTRADA
 GLuint VaoEstrada = 0;
+GLuint vboEstrada = 0;
 int NVerticesEstrada;
 GLuint texturaEstrada;
 
 //PINHEIRO
 GLuint VaoPinheiro = 0;
+GLuint vboPinheiro = 0;
 int NVerticesPinheiro;
 GLuint texturaPinheiro;
-
-// BARRACA
-GLuint VaoBarraca = 0;
-int NVerticesBarraca;
-GLuint texturaBarraca;
 
 // CHARACTER
 GLuint texturaCharacter;
@@ -48,43 +45,94 @@ GLuint texturaCharacter;
 //MODELOS
 struct Modelo {
     GLuint vao = 0;
+    GLuint vbo = 0;
     int nVertices = 0;
     GLuint textura = 0;
 };
 
-Modelo parede, paredePorta, paredeJanela, paredeCanto, telhado, telhadoCanto, barracaVerde, charBarraca, moinhoBase, moinhoMadeira, moinhoTelhado, moinhoPas, poste;
+Modelo parede, paredePorta, paredeJanela, telhado, barracaVerde, barracaVermelha;
+Modelo moinhoBase, moinhoMadeira, moinhoTelhado, moinhoPas, poste;
+Modelo cerca, portao, carrinho, planta, flores, barril, caixa, pedras, placa, cogumelos,
+       mesa, banco, deck;
+Modelo femaleB, femaleC, femaleF, maleA, maleB, maleF;
 
-// TRANSFORMAÇÕES DOS OBJETOS
-// Posição no mundo (X, Y, Z), rotação em torno de Y em graus e escala uniforme.
+// para poder controlar posição e rotação dos objetos
 struct Transformacao {
     glm::vec3 posicao;
     float rotacaoY;
     float escala;
 };
 
-const Transformacao CASAS[] = {
-    {glm::vec3(-8.0f, 0.0f, -20.0f),  90.0f, 2.0f},
-    {glm::vec3( 8.0f, 0.0f, -34.0f), -90.0f, 2.0f}
+struct InstanciaModelo {
+    const Modelo *modelo;
+    Transformacao transformacao;
 };
 
-const Transformacao BARRACA = {
-    // Barraca comerciante
-    glm::vec3(3.5f, 0.0f, -50.0f), 0.0f, 2.0f
+// POSIÇÔES
+const Transformacao CASAS[] = {
+    {glm::vec3(-8.0f, 0.0f, -20.0f),  90.0f, 2.0f},
+    {glm::vec3( 8.0f, 0.0f, -34.0f), -90.0f, 2.0f},
+    {glm::vec3(-8.0f, 0.0f, -4.0f),  90.0f, 2.0f},
+    {glm::vec3( 8.0f, 0.0f, -64.0f), -90.0f, 2.0f},
+    {glm::vec3(-6.0f, 0.0f, -52.0f),  90.0f, 2.0f}
+};
+
+const InstanciaModelo BARRACAS[] = {
+    {&barracaVerde,     {glm::vec3(10.0f, 0.0f, -52.0f), 90.0f, 2.0f}},
+    {&barracaVermelha,  {glm::vec3(8.0f, 0.0f, -44.0f), 90.0f, 2.0f}}
 };
 
 const Transformacao MOINHO = {
     glm::vec3(8.0f, 0.0f, -8.0f), 180.0f, 2.0f
 };
 
-const float VELOCIDADE_PAS = 1.0f; // radianos por segundo
+const InstanciaModelo DECORACOES[] = {
+    // Estoque atrás do comerciante da barraca verde
+    {&caixa,  {glm::vec3(9.2f, 0.0f, -55.0f), 15.0f, 2.0f}},
+    {&barril, {glm::vec3(11.2f, 0.0f, -55.0f), 0.0f, 2.0f}},
+    {&barril, {glm::vec3(11.2f, 0.0f, -56.0f), 0.0f, 2.0f}},
+    // Estoque atrás do comerciante da barraca vermelha
+    {&caixa,  {glm::vec3(7.2f, 0.0f, -41.0f), -15.0f, 2.0f}},
+    {&barril, {glm::vec3(9.2f, 0.0f, -41.0f), 0.0f, 2.0f}},
+    {&barril, {glm::vec3(9.2f, 0.0f, -40.0f), 0.0f, 2.0f}},
+   
+    {&placa,  {glm::vec3(2.0f, 0.0f, -42.8f), -90.0f, 2.0f}},
 
+    {&pedras, {glm::vec3(-14.5f, 0.0f, -28.0f), 30.0f, 2.0f}},
+    {&pedras, {glm::vec3(-12.5f, 0.0f, -14.0f), 30.0f, 2.0f}},
+    {&pedras, {glm::vec3(10.5f, 0.0f, -6.0f), 30.0f, 2.0f}},
+    {&pedras, {glm::vec3(4.5f, 0.0f, -10.0f), 30.0f, 2.0f}},
+    {&placa,  {glm::vec3(2.3f, 0.0f, 0.0f), -90.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(-4.5f, 0.0f, -37.0f), 0.0f, 2.0f}},
+    {&cogumelos, {glm::vec3(-10.0f, 0.0f, -23.5f), 0.0f, 2.0f}},
+    {&carrinho, {glm::vec3(-7.0f, 0.0f, -32.2f), 90.0f, 2.0f}},
+};
+
+const Transformacao FAZENDA = {
+    glm::vec3(-10.0f, 0.0f, -40.0f), 90.0f, 2.0f
+};
+
+const InstanciaModelo CHARACTERS[] = {
+    // Comerciante da barraca
+    {&maleA, {glm::vec3(10.0f, 0.0f, -53.2f), 0.0f, 2.0f}},
+    {&maleF, {glm::vec3(8.0f, 0.0f, -42.8f), 180.0f, 2.0f}},
+    // Senhor entrando na casa
+    {&femaleF, {glm::vec3(-5.0f, 0.0f, -20.0f), 90.0f, 2.0f}},
+    // Senhor dentro da fazenda
+    {&maleB, {glm::vec3(-10.0f, 0.0f, -40.0f), 90.0f, 2.0f}},
+    {&femaleC, {glm::vec3(-8.5f, 0.0f, -36.0f), 270.0f, 2.0f}},
+    // Senhor andando pela rua
+    {&femaleB, {glm::vec3(0.0f, 0.0f, -30.0f), 180.0f, 2.0f}}
+};
+
+// VARIÁVEIS PARA CONTROLE DE FUNÇÔES
 bool moinhoLigado = true;
+const float VELOCIDADE_PAS = 1.0f; // radianos por segundo
 float anguloPas = 0.0f;
 bool teclaMAnterior = false;
 bool ehNoite = false;          
 bool teclaNAnterior = false;
 bool desenhandoMinimapa = false; // verdadeiro enquanto a cena é desenhada no minimapa
-
 
 // Postes: intercalados com os pinheiros, mais perto da estrada.
 const int POSTES_Z_INICIO = -54;
@@ -95,21 +143,6 @@ const float ESCALA_POSTES = 2.0f;
 const float ALTURA_LAMPADA = 1.40f * ESCALA_POSTES;
 const float RAIO_LAMPADA = 0.2f;
 const float RAIO_MARCADOR_MINIMAPA = 0.6f; // raio do ponto que representa cada poste no minimapa
-
-struct Personagem {
-    const Modelo *modelo;
-    Transformacao transformacao;
-};
-
-// Cada entrada escolhe um modelo e sua posição, rotação e escala.
-// O modelo é carregado uma vez em inicializaObjetos() e compartilhado pelas cópias.
-const Personagem CHARACTERS[] = {
-    // Comerciante da barraca
-    {&charBarraca, {glm::vec3(4.7f, 0.0f, -50.0f), -90.0f, 2.0f}},
-    // Senhor entrando na casa
-    {&charBarraca, {glm::vec3(-5.0f, 0.0f, -20.0f), -90.0f, 2.0f}}
-};
-
 
 // Sol: direção a partir da câmera, distância e raio.
 // Aponta para cima e à frente da câmera inicial.
@@ -122,8 +155,26 @@ const float RAIO_SOL = 6.0f;
 // Distribuição dos trechos da estrada e das fileiras de pinheiros.
 const int ESTRADA_Z_INICIO = -59;
 const int ESTRADA_Z_FIM = 0;
+
+// Estradas do comércio: paralelas em direção a +X.
+const int QUANTIDADE_ESTRADAS_COMERCIO = 3;
+const float ESTRADA_COMERCIO_Z = -46.0f;
+const float DISTANCIA_ENTRE_ESTRADAS_COMERCIO = 2.0f;
+const int ESTRADA_COMERCIO_X_FIM = 15;
+const float ESTRADA_COMERCIO_X_INICIO = 2.0f; // primeiro trecho após a estrada principal
 const glm::vec3 ESCALA_ESTRADA(2.0f, 1.0f, 2.0f);
 const float ESPACAMENTO_ESTRADA = 2.0f;
+
+// Fim efetivo da rua, considerando o espaçamento das peças.
+const float ULTIMO_TRECHO_COMERCIO_X = ESTRADA_COMERCIO_X_INICIO
+    + std::floor((ESTRADA_COMERCIO_X_FIM - ESTRADA_COMERCIO_X_INICIO)
+                 / ESPACAMENTO_ESTRADA) * ESPACAMENTO_ESTRADA;
+const float FIM_RUA_COMERCIO_X = ULTIMO_TRECHO_COMERCIO_X + ESPACAMENTO_ESTRADA / 2.0f;
+// Deck encostado no fim da rua; poste atrás dele.
+const float POSTE_COMERCIO_X = ESTRADA_COMERCIO_X_FIM + 1.5f;
+const float ESCALA_DECK_COMERCIO = 2.0f;
+const float ESCALA_MOVEIS_COMERCIO = 2.0f;
+
 const int PINHEIROS_Z_INICIO = -59;
 const int PINHEIROS_Z_FIM = 0;
 const int PASSO_PINHEIROS = 10;
@@ -141,6 +192,7 @@ const float PASSO_TERRENO = 0.5f;
 const int TERRENO_X_MIN = -25, TERRENO_X_MAX = 25;
 const int Z_FIM = -59;
 struct Colina {float x, z, raio, altura;};
+
 const Colina COLINAS[] = {
     {-34.0f, -26.0f, 16.0f, 3.5f},
     { 32.0f, -52.0f, 18.0f, 4.0f},
@@ -151,12 +203,19 @@ const Colina COLINAS[] = {
     {-18.0f, -62.0f,  7.0f, 1.5f},
     { 40.0f, -22.0f,  9.0f, 2.0f},
 };
+
 struct ZonaPlana { float x, z, raio; };
+
 const ZonaPlana ZONAS_PLANAS[] = {
     {-8.0f, -20.0f, 9.0f},
     { 8.0f, -34.0f, 9.0f},
+    {-8.0f, -48.0f, 9.0f},
+    { 8.0f, -64.0f, 9.0f},
+    {-14.0f, -6.0f, 10.0f},
 };
+
 std::vector<int> niveisTerreno;
+
 float alturaTerreno(float x, float z) {
     if (std::fabs(x) < 4.0f) return 0.0f;
     for (const ZonaPlana &zp : ZONAS_PLANAS)
@@ -187,11 +246,12 @@ int nivelTerreno(int bx, int bz, int padrao) {
     return niveisTerreno[indiceTerreno(bx, bz)];
 }
 
+
+// VARIÁVEIS PADRÃO DOS PROGRAMAS
 int WIDTH = 1000;
 int HEIGHT = 800; 
 int FB_WIDTH = 0;
 int FB_HEIGHT = 0;
-float ESCALA_RETINA = 1.0f;
 
 float Tempo_entre_frames = 0.0f; // variavel utilizada para movimentar a camera
 
@@ -209,7 +269,7 @@ double lastX = WIDTH / 2.0;
 double lastY = HEIGHT / 2.0;
 bool primeiro_mouse = true;
 
-int loadSimpleOBJ(string filePATH, int &nVertices)
+int loadSimpleOBJ(string filePATH, int &nVertices, GLuint &VBO)
 {
     // Vetores temporários para armazenar os dados lidos do arquivo
     std::vector<glm::vec3> vertices;
@@ -289,9 +349,9 @@ int loadSimpleOBJ(string filePATH, int &nVertices)
     }
 
     arqEntrada.close();
-    
+
     std::cout << "Gerando o buffer de geometria..." << std::endl;
-    GLuint VBO, VAO;
+    GLuint VAO;
 
     // Geração e Bind do VBO
     glGenBuffers(1, &VBO);
@@ -332,13 +392,16 @@ int loadSimpleOBJ(string filePATH, int &nVertices)
     return VAO;
 }
 
+
+// preenche a struct Modelo com os dados corretos
 Modelo carregaModelo(const string &obj, GLuint textura) {
     Modelo m;
-    m.vao = loadSimpleOBJ(obj, m.nVertices);
+    m.vao = loadSimpleOBJ(obj, m.nVertices, m.vbo);
     m.textura = textura;
     return m;
 }
 
+// aplica as transformações e desenha o modelo
 void desenhaModelo(const Modelo &m, const glm::mat4 &matriz) {
     GLint loc = glGetUniformLocation(Shader_programm, "matriz");
     glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(matriz));
@@ -417,7 +480,6 @@ GLuint carregaTextura(string filePATH)
 void atualizaTamanhoFramebuffer()
 {
     glfwGetFramebufferSize(Window, &FB_WIDTH, &FB_HEIGHT);
-    ESCALA_RETINA = (float)FB_WIDTH / (float)WIDTH;
 }
 
 void redimensionaCallback(GLFWwindow *window, int w, int h)
@@ -566,31 +628,54 @@ void inicializaSol()
 
 void inicializaObjetos()
 {
-    texture1 = carregaTextura("../assets/Modelos3D/colormap.png");
-    Vao = loadSimpleOBJ("../assets/Modelos3D/block-grass-low-large.obj", NVertices);
-
-    texturaEstrada = carregaTextura("../assets/Modelos3D/colormap-fantasy.png");
-    texturaCharacter = carregaTextura("../assets/Modelos3D/colormap-mini-characters.png");
-    VaoEstrada = loadSimpleOBJ("../assets/Modelos3D/road.obj", NVerticesEstrada);   
-
-    texturaPinheiro = texture1; // mesma paleta do chão (Platformer Kit), não precisa carregar de novo
-    VaoPinheiro = loadSimpleOBJ("../assets/Modelos3D/tree-pine.obj", NVerticesPinheiro);
-
     const string pasta = "../assets/Modelos3D/";
-    parede       = carregaModelo(pasta + "wall.obj",              texturaEstrada);
-    paredePorta  = carregaModelo(pasta + "wall-door.obj",         texturaEstrada);
+
+    texture1 = carregaTextura(pasta + "colormap.png");
+    Vao = loadSimpleOBJ(pasta + "block-grass-low-large.obj", NVertices, vboChao);
+
+    texturaEstrada = carregaTextura(pasta + "colormap-fantasy.png");
+    texturaCharacter = carregaTextura(pasta + "colormap-mini-characters.png");
+    VaoEstrada = loadSimpleOBJ(pasta + "road.obj", NVerticesEstrada, vboEstrada);   
+
+    texturaPinheiro = texture1;
+    VaoPinheiro = loadSimpleOBJ(pasta + "tree-pine.obj", NVerticesPinheiro, vboPinheiro);
+
+    parede = carregaModelo(pasta + "wall.obj", texturaEstrada);
+    paredePorta = carregaModelo(pasta + "wall-door.obj", texturaEstrada);
     paredeJanela = carregaModelo(pasta + "wall-window-small.obj", texturaEstrada);
-    paredeCanto  = carregaModelo(pasta + "wall-corner.obj",       texturaEstrada);
-    telhado      = carregaModelo(pasta + "roof.obj",              texturaEstrada);
-    telhadoCanto = carregaModelo(pasta + "roof-corner.obj",       texturaEstrada);
-    barracaVerde = carregaModelo(pasta + "stall-green.obj",       texturaEstrada);
-    charBarraca = carregaModelo(pasta + "character-male-b.obj",   texturaCharacter);
-    moinhoBase    = carregaModelo(pasta + "wall-block.obj",      texturaEstrada);
+    telhado = carregaModelo(pasta + "roof.obj", texturaEstrada);
+    
+    barracaVerde = carregaModelo(pasta + "stall-green.obj", texturaEstrada);
+    barracaVermelha = carregaModelo(pasta + "stall-red.obj", texturaEstrada);
+
+    maleA = carregaModelo(pasta + "character-male-a.obj", texturaCharacter);
+    maleB = carregaModelo(pasta + "character-male-b.obj", texturaCharacter);
+    maleF = carregaModelo(pasta + "character-male-f.obj", texturaCharacter);
+    femaleB = carregaModelo(pasta + "character-female-b.obj", texturaCharacter);
+    femaleC = carregaModelo(pasta + "character-female-c.obj", texturaCharacter);
+    femaleF = carregaModelo(pasta + "character-female-f.obj", texturaCharacter);
+
+    moinhoBase = carregaModelo(pasta + "wall-block.obj", texturaEstrada);
     moinhoMadeira = carregaModelo(pasta + "wall-wood-block.obj", texturaEstrada);
     moinhoTelhado = carregaModelo(pasta + "roof-high-point.obj", texturaEstrada);
-    moinhoPas     = carregaModelo(pasta + "windmill.obj",        texturaEstrada);
-    poste         = carregaModelo(pasta + "lantern.obj",         texturaEstrada);
+    moinhoPas = carregaModelo(pasta + "windmill.obj", texturaEstrada);
+    
+    poste = carregaModelo(pasta + "lantern.obj", texturaEstrada);
+    
+    cerca = carregaModelo(pasta + "fence.obj", texturaEstrada);
+    portao = carregaModelo(pasta + "fence-gate.obj", texturaEstrada);
+    placa = carregaModelo(pasta + "sign.obj", texture1);
 
+    carrinho = carregaModelo(pasta + "cart.obj", texturaEstrada);
+    planta = carregaModelo(pasta + "plant.obj", texture1);
+    flores = carregaModelo(pasta + "flowers.obj", texture1);
+    barril = carregaModelo(pasta + "barrel.obj", texture1);
+    caixa = carregaModelo(pasta + "crate.obj", texture1);
+    pedras = carregaModelo(pasta + "rocks.obj", texture1);
+    cogumelos = carregaModelo(pasta + "mushrooms.obj", texture1);
+    mesa = carregaModelo(pasta + "stall.obj", texturaEstrada);
+    banco = carregaModelo(pasta + "stall-bench.obj", texturaEstrada);
+    deck = carregaModelo(pasta + "planks-half.obj", texture1);
 
     inicializaSol();
     inicializaTerreno();
@@ -598,18 +683,12 @@ void inicializaObjetos()
 
 void inicializaShaders()
 {
-    // 1. Lê o código dos arquivos externos
-    //std::string vertexCode = leShaderDoArquivo("../assets/shaders/vertex_shader.glsl");
-    //std::string fragmentCode = leShaderDoArquivo("../assets/shaders/fragment_shader.glsl");
-
     std::string vertexCode = leShaderDoArquivo("../assets/shaders/vertex_shader.glsl");
     std::string fragmentCode = leShaderDoArquivo("../assets/shaders/fragment_shader.glsl");
 
-    // 2. Converte de std::string para const char* para o OpenGL ler
     const char *vertex_shader = vertexCode.c_str();
     const char *fragment_shader = fragmentCode.c_str();
 
-    // 3. Compila o vertex shader
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vs, 1, &vertex_shader, NULL);
     glCompileShader(vs);
@@ -626,7 +705,6 @@ void inicializaShaders()
         exit(EXIT_FAILURE);
     }
 
-    // 3. Compila o fragment shader shader
     GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fs, 1, &fragment_shader, NULL);
     glCompileShader(fs);
@@ -641,7 +719,6 @@ void inicializaShaders()
         exit(EXIT_FAILURE);
     }
 
-    // 5. Especificação do Shader Programm
     Shader_programm = glCreateProgram();
     glAttachShader(Shader_programm, vs);
     glAttachShader(Shader_programm, fs);
@@ -734,7 +811,6 @@ void especificaMatrizVisualizacaoMinimapa() {
 }
 
 void especificaMatrizProjecaoMinimapa() {
-    // Projeção ortográfica: o minimapa mostra um quadrado de 2 * tamanho unidades de lado
     float tamanho = 20.0f;
 
     glm::mat4 projecao = glm::ortho(-tamanho, tamanho, -tamanho, tamanho, 0.1f, 100.0f);
@@ -884,6 +960,19 @@ void desenhaEstrada() {
 
         glDrawArrays(GL_TRIANGLES, 0, NVerticesEstrada);
     }
+
+    for (int i = 0; i < QUANTIDADE_ESTRADAS_COMERCIO; i++) {
+        const float z = ESTRADA_COMERCIO_Z - i * DISTANCIA_ENTRE_ESTRADAS_COMERCIO;
+        for (float x = ESTRADA_COMERCIO_X_INICIO; x <= ESTRADA_COMERCIO_X_FIM; x += ESPACAMENTO_ESTRADA) {
+            glm::mat4 transformacao = glm::mat4(1.0f);
+            transformacao = glm::translate(transformacao, glm::vec3(x, 0.0f, z));
+            transformacao = glm::rotate(transformacao, glm::radians(90.0f), glm::vec3(0, 1, 0));
+            transformacao = glm::scale(transformacao, ESCALA_ESTRADA);
+            glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(transformacao));
+    
+            glDrawArrays(GL_TRIANGLES, 0, NVerticesEstrada);
+        }
+    }
 }
 
 void desenhaPinheiro() {
@@ -907,16 +996,22 @@ void desenhaPinheiro() {
 }
 
 void desenhaBarraca() {
-    glm::mat4 modelo = glm::translate(glm::mat4(1.0f), BARRACA.posicao);
-    modelo = glm::rotate(modelo, glm::radians(BARRACA.rotacaoY), glm::vec3(0, 1, 0));
-    modelo = glm::scale(modelo, glm::vec3(BARRACA.escala));
+    for (const InstanciaModelo &barraca : BARRACAS) {
+        const Transformacao &t = barraca.transformacao;
 
-    desenhaModelo(barracaVerde, modelo);
+        glm::mat4 matriz = glm::translate(glm::mat4(1.0f), t.posicao);
+        matriz = glm::rotate(
+            matriz, glm::radians(t.rotacaoY), glm::vec3(0, 1, 0)
+        );
+        matriz = glm::scale(matriz, glm::vec3(t.escala));
+
+        desenhaModelo(*barraca.modelo, matriz);
+    }
 }
 
 void desenhaCharacter()
 {
-    for (const Personagem &personagem : CHARACTERS) {
+    for (const InstanciaModelo &personagem : CHARACTERS) {
         const Transformacao &t = personagem.transformacao;
         glm::mat4 matriz = glm::mat4(1.0f);
 
@@ -943,44 +1038,49 @@ void desenhaCasa(glm::vec3 pos, float rotY = 0.0f, float escala = 2.0f)
     const int PROFUNDIDADE = 2;
     const float ALTURA_PAREDE = 1.0f; 
 
+    // aplica as transformações da casa de acordo com o que for passado
     glm::mat4 base = glm::mat4(1.0f);
     base = glm::translate(base, pos);
     base = glm::rotate(base, glm::radians(rotY), glm::vec3(0, 1, 0));
     base = glm::scale(base, glm::vec3(escala));
 
+    // função pra posicionar cada parte da casa
     auto coloca = [&](const Modelo &m, glm::vec3 local, float rot) {
         glm::mat4 t = glm::translate(base, local);
         t = glm::rotate(t, glm::radians(rot), glm::vec3(0, 1, 0));
         desenhaModelo(m, t);
     };
 
+    // posiciona cada parte da casa
     for (int i = 0; i < LARGURA; i++) {
         for (int j = 0; j < PROFUNDIDADE; j++) {
             float x = i - (LARGURA - 1) / 2.0f;
             float z = j - (PROFUNDIDADE - 1) / 2.0f;
 
-            // Frente (+z): porta no meio, janelas ao lado
+            // parte da frente
             if (j == PROFUNDIDADE - 1)
+                //porta no meio e janelas no lado
                 coloca(i == LARGURA / 2 ? paredePorta : paredeJanela, glm::vec3(x, 0, z), -90.0f);
-            // Fundo (-z)
+            // parte de trás
             if (j == 0)
                 coloca(parede, glm::vec3(x, 0, z), 90.0f);
-            // Lado esquerdo (-x)
+            // esquerda
             if (i == 0)
                 coloca(paredeJanela, glm::vec3(x, 0, z), 180.0f);
-            // Lado direito (+x)
+            // direita
             if (i == LARGURA - 1)
                 coloca(paredeJanela, glm::vec3(x, 0, z), 0.0f);
 
-            // Telhado: beiral para fora, ponto alto no meio da casa
+            // telhado
             if (j >= PROFUNDIDADE / 2)
-                coloca(telhado, glm::vec3(x, ALTURA_PAREDE, z), 90.0f);   // metade da frente
+                coloca(telhado, glm::vec3(x, ALTURA_PAREDE, z), 90.0f);
             else
-                coloca(telhado, glm::vec3(x, ALTURA_PAREDE, z), -90.0f);  // metade de trás
+                coloca(telhado, glm::vec3(x, ALTURA_PAREDE, z), -90.0f);
         }
     }
 }
 
+// para cada casa desenha a casa
 void desenhaCasas()
 {
     for (const Transformacao &casa : CASAS) {
@@ -1004,6 +1104,68 @@ void desenhaMoinho(){
     desenhaModelo(moinhoPas, pas);
 }
 
+void desenhaFazenda()
+{
+    const int W = 5; // width, largura
+    const int D = 4; // depth, profundidade
+    const float ROT_CERCA_X = 90.0f;
+    const float ROT_CERCA_Z = 0.0f;
+    const float ESCALA_PLANTAS = 1.0f;
+    const float CERCA_DESLOC = 0.45f;
+
+    //faz a transformação base da fazenda
+    glm::mat4 base = glm::mat4(1.0f);
+    base = glm::translate(base, FAZENDA.posicao);
+    base = glm::rotate(base, glm::radians(FAZENDA.rotacaoY), glm::vec3(0, 1, 0));
+    base = glm::scale(base, glm::vec3(FAZENDA.escala));
+
+    // função auxiliar pra posicionar os objetos da fazenda
+    auto coloca = [&](const Modelo &m, glm::vec3 local, float rot, float esc = 1.0f) {
+        glm::mat4 t = glm::translate(base, local);
+        t = glm::rotate(t, glm::radians(rot), glm::vec3(0, 1, 0));
+        t = glm::scale(t, glm::vec3(esc));
+        desenhaModelo(m, t);
+    };
+
+    // desenha a linha da cerca
+    auto colocaCerca = [&](const Modelo &m, glm::vec3 linha, float rot) {
+        glm::mat4 giro = glm::rotate(glm::mat4(1.0f), glm::radians(rot), glm::vec3(0, 1, 0));
+        glm::vec3 desloc = glm::vec3(giro * glm::vec4(CERCA_DESLOC, 0.0f, 0.0f, 1.0f));
+        glm::mat4 t = glm::translate(base, linha - desloc) * giro;
+        desenhaModelo(m, t);
+    };
+
+    float meiaL = W / 2.0f;
+    float meiaP = D / 2.0f;
+
+    // posiciona ascercas
+    for (int i = 0; i < W; i++) {
+        float x = i - (W - 1) / 2.0f;
+        // frente
+        colocaCerca(i == W / 2 ? portao : cerca, glm::vec3(x, 0, meiaP), ROT_CERCA_X);
+        // trás
+        colocaCerca(cerca, glm::vec3(x, 0, -meiaP), ROT_CERCA_X);
+    }
+    for (int j = 0; j < D; j++) {
+        float z = j - (D - 1) / 2.0f;
+        // esquerda
+        colocaCerca(cerca, glm::vec3(-meiaL, 0, z), ROT_CERCA_Z);
+        // direita
+        colocaCerca(cerca, glm::vec3( meiaL, 0, z), ROT_CERCA_Z);
+    }
+
+    // posiciona as plantas
+    float larguraUtil = W - 1.0f;
+    for (int r = 0; r < D - 1; r++) {
+        float z = r - (D - 2) / 2.0f;
+        const Modelo &tipo = (r % 2 == 0) ? planta : flores;
+        for (int c = 0; c < 6; c++) {
+            float x = -larguraUtil / 2.0f + c * larguraUtil / 5.0f;
+            coloca(tipo, glm::vec3(x, 0, z), 0.0f, ESCALA_PLANTAS);
+        }
+    }
+}
+
 void desenhaLampada(glm::vec3 posicao, float raio) {
     glm::mat4 modelo = glm::translate(glm::mat4(1.0f), posicao);
     modelo = glm::scale(modelo, glm::vec3(raio));
@@ -1023,24 +1185,98 @@ void desenhaLampada(glm::vec3 posicao, float raio) {
     glUniform1i(modoNoite, ehNoite); 
 }
 
-void desenhaPostes(){
+// para cada decoração desenha a decoração na posição e rotação especificadas
+void desenhaDecoracoes()
+{
+    for (const InstanciaModelo &d : DECORACOES) {
+        const Transformacao &t = d.transformacao;
+        glm::mat4 matriz = glm::translate(glm::mat4(1.0f), t.posicao);
+        matriz = glm::rotate(matriz, glm::radians(t.rotacaoY), glm::vec3(0, 1, 0));
+        matriz = glm::scale(matriz, glm::vec3(t.escala));
+        desenhaModelo(*d.modelo, matriz);
+    }
+}
+
+std::vector<glm::vec3> posicoesPostes() {
+    std::vector<glm::vec3> posicoes;
     for (int z = POSTES_Z_INICIO; z <= POSTES_Z_FIM; z += PASSO_POSTES) {
         for (int lado = -1; lado <= 1; lado += 2) {
-            glm::mat4 matriz = glm::mat4(1.0f);
-            matriz = glm::translate(matriz, glm::vec3(lado * AFASTAMENTO_POSTES_X, 0.0f, z * 2.0f));
-            matriz =glm::scale(matriz, glm::vec3(ESCALA_POSTES));
-
-            desenhaModelo(poste, matriz);  
-
-            glm::vec3 posLampada(lado * AFASTAMENTO_POSTES_X, ALTURA_LAMPADA, z * 2.0f);
-
-            if (desenhandoMinimapa) {
-                desenhaLampada(posLampada, RAIO_MARCADOR_MINIMAPA); // marcador ampliado, sempre visível
-            } else if (ehNoite) {
-                desenhaLampada(posLampada, RAIO_LAMPADA);           // globo de luz normal
-            }
+            posicoes.emplace_back(lado * AFASTAMENTO_POSTES_X, 0.0f, z * 2.0f);
         }
     }
+    if (QUANTIDADE_ESTRADAS_COMERCIO > 0) {
+        const float centroZ = ESTRADA_COMERCIO_Z
+            - (QUANTIDADE_ESTRADAS_COMERCIO - 1) * DISTANCIA_ENTRE_ESTRADAS_COMERCIO / 2.0f;
+        posicoes.emplace_back(POSTE_COMERCIO_X, 0.0f, centroZ);
+    }
+    return posicoes;
+}
+
+void atualizaLuzesPostes() {
+    // Mesmo limite declarado no fragment shader.
+    const int MAX_LUZES = 64;
+    const auto posicoes = posicoesPostes();
+    const int quantidade = static_cast<int>(posicoes.size()) < MAX_LUZES
+        ? static_cast<int>(posicoes.size()) : MAX_LUZES;
+    for (int i = 0; i < quantidade; i++) {
+        const glm::vec3 lampada = posicoes[i] + glm::vec3(0.0f, ALTURA_LAMPADA, 0.0f);
+        const std::string nome = "posicoesLuzes[" + std::to_string(i) + "]";
+        glUniform3fv(glGetUniformLocation(Shader_programm, nome.c_str()),
+                     1, glm::value_ptr(lampada));
+    }
+    glUniform1i(glGetUniformLocation(Shader_programm, "quantidadeLuzes"), quantidade);
+    glUniform1i(glGetUniformLocation(Shader_programm, "luzesPostesAtivas"), ehNoite);
+}
+
+void desenhaPostes(){
+    auto colocaPoste = [&](const glm::vec3 &posicao) {
+        glm::mat4 matriz = glm::translate(glm::mat4(1.0f), posicao);
+        matriz = glm::scale(matriz, glm::vec3(ESCALA_POSTES));
+        desenhaModelo(poste, matriz);
+
+        glm::vec3 posLampada = posicao + glm::vec3(0.0f, ALTURA_LAMPADA, 0.0f);
+        if (desenhandoMinimapa) {
+            desenhaLampada(posLampada, RAIO_MARCADOR_MINIMAPA);
+        } else if (ehNoite) {
+            desenhaLampada(posLampada, RAIO_LAMPADA);
+        }
+    };
+
+    for (const glm::vec3 &posicao : posicoesPostes()) {
+        colocaPoste(posicao);
+    }
+}
+
+void desenhaDecksComercio() {
+    // Posições manuais em coordenadas de mundo (X, Y, Z).
+    const glm::vec3 posicoesDecks[] = {
+        {15.0f, 0.0f, -46.0f},
+        {15.0f, 0.0f, -48.0f},
+        {15.0f, 0.0f, -50.0f}
+    };
+
+    auto coloca = [&](const Modelo &m, glm::vec3 posicao, float rotacao, float escala) {
+        glm::mat4 matriz = glm::translate(glm::mat4(1.0f), posicao);
+        matriz = glm::rotate(matriz, glm::radians(rotacao), glm::vec3(0, 1, 0));
+        matriz = glm::scale(matriz, glm::vec3(escala));
+        desenhaModelo(m, matriz);
+    };
+
+    for (const glm::vec3 &posicao : posicoesDecks) {
+        coloca(deck, posicao, 0.0f, ESCALA_DECK_COMERCIO);
+    }
+
+    // Banco central apoiado no deck.
+    coloca(banco, glm::vec3(15.5f, 0.12f, -48.0f), 0.0f, ESCALA_MOVEIS_COMERCIO);
+
+    // Mesas e bancos nas duas laterais.
+    coloca(mesa, glm::vec3(13.0f, 0.0f, -43.0f), 90.0f, ESCALA_MOVEIS_COMERCIO);
+    coloca(banco, glm::vec3(13.0f, 0.0f, -44.2f), -90.0f, ESCALA_MOVEIS_COMERCIO);
+    coloca(banco, glm::vec3(13.0f, 0.0f, -41.8f), 90.0f, ESCALA_MOVEIS_COMERCIO);
+
+    coloca(mesa, glm::vec3(13.0f, 0.0f, -53.0f), 90.0f, ESCALA_MOVEIS_COMERCIO);
+    coloca(banco, glm::vec3(13.0f, 0.0f, -54.2f), -90.0f, ESCALA_MOVEIS_COMERCIO);
+    coloca(banco, glm::vec3(13.0f, 0.0f, -51.8f), 90.0f, ESCALA_MOVEIS_COMERCIO);
 }
 
 // A mesma composição é usada na câmera principal e no minimapa.
@@ -1053,7 +1289,10 @@ void desenhaVila()
     desenhaCharacter();
     desenhaCasas();
     desenhaMoinho();
+    desenhaFazenda();
     desenhaPostes();
+    desenhaDecoracoes();
+    desenhaDecksComercio();
 }
 
 void inicializaRenderizacao()
@@ -1080,9 +1319,10 @@ void inicializaRenderizacao()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(Shader_programm);
-        aplicaIluminacao();
 
         trataTeclado();
+        aplicaIluminacao();
+        atualizaLuzesPostes();
 
         glActiveTexture(GL_TEXTURE0);
 
@@ -1090,9 +1330,6 @@ void inicializaRenderizacao()
             anguloPas += VELOCIDADE_PAS * Tempo_entre_frames;
         }
         
-        // Ativa Gaveta 0
-        // glBindTexture(GL_TEXTURE_2D, texture1); // Pluga a Textura 1 nela
-        // glBindVertexArray(Vao);
 
         glm::mat4 transformacao = glm::mat4(1.0f);
         transformacao = glm::translate(transformacao, glm::vec3(0.0f, -2.0f, 0.0f));
@@ -1125,8 +1362,30 @@ void inicializaRenderizacao()
         glfwSwapBuffers(Window);
     }
 
-    glDeleteBuffers(1, &vboSol);
-    glDeleteVertexArrays(1, &vaoSol);
+    const Modelo *modelos[] = {
+        &parede, &paredePorta, &paredeJanela, &telhado, 
+        &barracaVerde, &barracaVermelha,
+        &maleA, &maleB, &maleF, &femaleB, &femaleC, &femaleF, 
+        &moinhoBase, &moinhoMadeira, &moinhoTelhado, &moinhoPas,
+        &poste, &cerca, &portao, &carrinho, &planta, &flores, &barril,
+        &caixa, &pedras, &placa, &cogumelos, &mesa, &banco, &deck
+    };
+    for (const Modelo *modelo : modelos) {
+        glDeleteBuffers(1, &modelo->vbo);
+        glDeleteVertexArrays(1, &modelo->vao);
+    }
+
+    const GLuint buffers[] = {vboSol, vboChao, vboEstrada, vboPinheiro};
+    const GLuint vaos[] = {vaoSol, Vao, VaoEstrada, VaoPinheiro};
+    // Os modelos e os pinheiros compartilham estas texturas: apagar cada uma uma vez.
+    const GLuint texturas[] = {texture1, texturaEstrada, texturaCharacter};
+    glDeleteBuffers(4, buffers);
+    glDeleteVertexArrays(4, vaos);
+    glDeleteTextures(3, texturas);
+    glDeleteProgram(Shader_programm);
+
+    glfwDestroyWindow(Window);
+    Window = nullptr;
     glfwTerminate();
 }
 
